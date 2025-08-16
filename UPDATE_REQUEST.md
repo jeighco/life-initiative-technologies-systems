@@ -1,17 +1,23 @@
-# Update Request: Fix CORS issue for music file loading
+# Update Request: Add Bluetooth latency compensation for sync
 
 ## Requested Changes
-React app can't load music files due to CORS policy blocking HTTP requests.
+Add adjustable latency compensation to sync Bluetooth speakers with network devices.
 
-Need to add CORS middleware to server.js:
+Need these features:
+- Configurable delay settings for different device types (Snapcast, Chromecast, Bluetooth)
+- API endpoints to adjust delays in real-time  
+- React UI controls for latency adjustment with sliders
+- Default Bluetooth compensation of ~250ms
+- Ability to fine-tune delays by device type
+- Device zone selection (enable/disable device types)
+- Test sync functionality
 
-1. Add  to the imports
-2. Add  after creating the express app
-
-The cors package is already installed. This will fix the No music files found issue in the React app.
+This will allow mixed setups with Bluetooth speakers to stay in sync with network streaming devices.
 
 Files to update:
-- server.js (add CORS middleware)
+- server.js (add latency compensation logic and API endpoints)
+- src/App.js (add latency control UI panel)
+- package.json (add any new dependencies if needed)
 
 ## Status
 ⏳ Ready for code update
