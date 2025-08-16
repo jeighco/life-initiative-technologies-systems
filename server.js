@@ -1,4 +1,3 @@
-cat > server.js << 'EOF'
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -574,4 +573,3 @@ function initialize() {
 server.listen(config.port, () => {
   initialize();
 });
-EOF
