@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Synced Music Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.407.0/lucide.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center">
+    <div class="container mx-auto p-4 max-w-2xl">
+        <div class="bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8 mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 text-indigo-400">Local Synced Music Player</h1>
+            <div id="player-container">
+                <div class="flex flex-col items-center mb-6">
+                    <div id="current-track-name" class="text-xl md:text-2xl font-semibold text-center truncate w-full px-2">Select a song</div>
+                    <div id="current-track-time" class="text-sm text-gray-400 mt-1">0:00</div>
+                </div>
+                <div class="flex justify-center items-center space-x-6 mb-6">
+                    <button id="play-pause-btn" class="p-4 bg-indigo-500 hover:bg-indigo-600 transition-all duration-200 rounded-full shadow-lg transform hover:scale-105" disabled>
+                        <i id="play-icon" data-lucide="play" class="w-8 h-8"></i>
+                    </button>
+                    <button id="next-btn" class="p-3 bg-gray-700 hover:bg-gray-600 transition-all duration-200 rounded-full shadow-md" disabled>
+                        <i data-lucide="fast-forward" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="mt-8">
+                <h2 class="text-xl font-bold text-center mb-4 text-gray-200">Available Songs</h2>
+                <div id="available-songs" class="flex flex-col space-y-2 max-h-48 overflow-y-auto pr-2">
+                    <p class="text-center text-gray-500">No songs found. Please drag and drop a file below!</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="w-full max-w-2xl bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8 mb-8">
+            <h2 class="text-xl font-bold text-center mb-4 text-gray-200">Playback Queue</h2>
+            <div id="playback-queue" class="flex flex-col space-y-2 max-h-48 overflow-y-auto pr-2">
+                <p class="text-center text-gray-500">The queue is empty.</p>
+            </div>
+        </div>
+        
+        <div id="drop-zone" class="w-full max-w-2xl border-4 border-dashed rounded-2xl p-6 text-center transition-colors duration-200 border-gray-600 bg-gray-800 cursor-pointer">
+            <i data-lucide="upload" class="w-12 h-12 mx-auto text-gray-400 mb-2"></i>
+            <p class="text-gray-400">Drag 'n' drop a music file here to get started!</p>
+        </div>
+    </div>
+
+    <!-- Unlock Audio Button -->
+    <div id="unlock-audio-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center z-50">
+        <button id="unlock-audio-btn" class="p-4 bg-indigo-500 hover:bg-indigo-600 transition-all duration-200 rounded-lg shadow-lg transform hover:scale-105 font-bold text-lg text-white">
+            Click to Unlock Audio
+        </button>
+    </div>
+
+    <script>
+        let audioContext = null;
+        let audioSource = null;
+        let audioBuffers = {};
+        let queue = [];
+        let currentTrackIndex = null;
+        let isPlaying = false;
+        let audioFiles = [];
+
+        const availableSongsDiv = document.getElementById('available-songs');
+        const queueDiv = document.getElementById('playback-queue');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const currentTrackName = document.getElementById('current-track-name');
+        const currentTrackTime = document.getElementById('current-track-time');
+        const dropZone = document.getElementById('drop-zone');
+        const playIcon = document.getElementById('play-icon');
+
+        const updateUI = () => {
+            availableSongsDiv.innerHTML = audioFiles.length ? '' : `<p class="text-center text-gray-500">No songs found. Please drag and drop a file below!</p>`;
+            audioFiles.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center bg-gray-700 p-3 rounded-lg shadow-inner cursor-pointer hover:bg-gray-600 transition-all duration-150';
+                item.innerHTML = `<span class="truncate flex-grow pr-2">${file.name}</span><span class="text-sm text-indigo-400">Add to Queue</span>`;
+                item.onclick = () => {
+                    queue.push(file);
+                    updateUI();
+                };
+                availableSongsDiv.appendChild(item);
+            });
+
+            queueDiv.innerHTML = queue.length ? '' : `<p class="text-center text-gray-500">The queue is empty.</p>`;
+            queue.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = `flex justify-between items-center p-3 rounded-lg shadow-inner ${index === currentTrackIndex ? 'bg-indigo-600' : 'bg-gray-700'} transition-all duration-150 group`;
+                item.innerHTML = `<span class="truncate flex-grow pr-2 ${index === currentTrackIndex ? 'font-bold text-white' : 'text-gray-200'}">${index + 1}. ${file.name}</span>`;
+                queueDiv.appendChild(item);
+            });
+
+            if (currentTrackIndex !== null && queue[currentTrackIndex]) {
+                currentTrackName.textContent = queue[currentTrackIndex].name;
+                playPauseBtn.disabled = false;
+                nextBtn.disabled = currentTrackIndex === queue.length - 1;
+            } else {
+                currentTrackName.textContent = 'Select a song';
+                currentTrackTime.textContent = '0:00';
+                playPauseBtn.disabled = true;
+                nextBtn.disabled = true;
+            }
+            
+            if (isPlaying) {
+                playIcon.setAttribute('data-lucide', 'pause');
+            } else {
+                playIcon.setAttribute('data-lucide', 'play');
+            }
+
+            // Check if lucide is loaded before calling createIcons
+            if (typeof lucide !== 'undefined') {
+                 lucide.createIcons();
+            } else {
+                console.error("Lucide is not loaded yet.");
+            }
+        };
+
+        const fetchAudio = async (file) => {
+            if (audioBuffers[file.name]) return;
+            const arrayBuffer = await file.arrayBuffer();
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            audioBuffers[file.name] = audioBuffer;
+        };
+        
+        const startPlayback = (file) => {
+            if (audioSource) audioSource.stop();
+            if (!audioBuffers[file.name]) {
+                fetchAudio(file).then(() => startPlayback(file));
+                return;
+            }
+
+            audioSource = audioContext.createBufferSource();
+            audioSource.buffer = audioBuffers[file.name];
+            audioSource.connect(audioContext.destination);
+            audioSource.start(0);
+
+            audioSource.onended = () => {
+                currentTrackIndex++;
+                if (currentTrackIndex < queue.length) {
+                    startPlayback(queue[currentTrackIndex]);
+                } else {
+                    isPlaying = false;
+                }
+                updateUI();
+            };
+        };
+
+        const playPause = () => {
+            if (isPlaying) {
+                if (audioSource) audioSource.stop();
+                isPlaying = false;
+            } else {
+                if (currentTrackIndex === null) {
+                    currentTrackIndex = 0;
+                }
+                if (queue.length > 0) {
+                    startPlayback(queue[currentTrackIndex]);
+                    isPlaying = true;
+                }
+            }
+            updateUI();
+        };
+
+        const nextTrack = () => {
+            if (currentTrackIndex !== null && currentTrackIndex < queue.length - 1) {
+                currentTrackIndex++;
+                startPlayback(queue[currentTrackIndex]);
+                isPlaying = true;
+            } else {
+                isPlaying = false;
+            }
+            updateUI();
+        };
+
+        playPauseBtn.onclick = playPause;
+        nextBtn.onclick = nextTrack;
+        
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-indigo-400'); };
+        dropZone.ondragleave = () => dropZone.classList.remove('border-indigo-400');
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-indigo-400');
+            const files = Array.from(e.dataTransfer.files);
+            audioFiles = files;
+            updateUI();
+        };
+        
+        window.onload = () => {
+            // Initial UI update on page load
+            updateUI();
+        };
+
+        // Add a click listener to the unlock button to start the AudioContext
+        const unlockAudioBtn = document.getElementById('unlock-audio-btn');
+        const unlockAudioOverlay = document.getElementById('unlock-audio-overlay');
+        unlockAudioBtn.onclick = () => {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            unlockAudioOverlay.style.display = 'none';
+        };
+    </script>
+</body>
+</html>
+
