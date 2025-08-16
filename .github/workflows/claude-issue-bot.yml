@@ -1,0 +1,62 @@
+name: Claude Issue Bot
+
+on:
+  issues:
+    types: [opened, edited]
+  
+jobs:
+  process-claude-request:
+    if: contains(github.event.issue.labels.*.name, 'claude-update')
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Extract issue details
+      id: extract
+      run: |
+        BRANCH_NAME="update-$(echo '${{ github.event.issue.title }}' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')"
+        echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_OUTPUT
+        
+    - name: Create update branch
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git checkout -b ${{ steps.extract.outputs.BRANCH_NAME }}
+        
+    - name: Create update placeholder
+      run: |
+        echo "# Update Request: ${{ github.event.issue.title }}" > UPDATE_REQUEST.md
+        echo "" >> UPDATE_REQUEST.md
+        echo "## Requested Changes" >> UPDATE_REQUEST.md
+        echo "${{ github.event.issue.body }}" >> UPDATE_REQUEST.md
+        echo "" >> UPDATE_REQUEST.md
+        echo "## Status" >> UPDATE_REQUEST.md
+        echo "⏳ Ready for code update" >> UPDATE_REQUEST.md
+        
+        git add UPDATE_REQUEST.md
+        git commit -m "Update request: ${{ github.event.issue.title }}"
+        
+    - name: Push branch and create PR
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git push origin ${{ steps.extract.outputs.BRANCH_NAME }}
+        
+        gh pr create \
+          --title "🤖 Code Update: ${{ github.event.issue.title }}" \
+          --body "Automated PR for issue #${{ github.event.issue.number }}
+
+        **Request:** ${{ github.event.issue.body }}
+        
+        Ready for manual code updates!
+        
+        Closes #${{ github.event.issue.number }}" \
+          --head ${{ steps.extract.outputs.BRANCH_NAME }} \
+          --base main
