@@ -1,17 +1,17 @@
-# Update Request: Fix sync issues and add Chromecast audio
+# Update Request: Fix CORS issue for music file loading
 
 ## Requested Changes
-Update server.js to fix sync issues and add Chromecast audio support.
+React app can't load music files due to CORS policy blocking HTTP requests.
 
-Need these improvements:
-- Larger buffers (128k instead of 64k) for better sync
-- Audio resampling (-af aresample=async=1) to prevent sync drift  
-- HTTP streaming endpoints for Chromecast audio
-- Dual audio output (Snapcast + Chromecast simultaneously)
-- Auto-queue progression when songs end
+Need to add CORS middleware to server.js:
+
+1. Add  to the imports
+2. Add  after creating the express app
+
+The cors package is already installed. This will fix the No music files found issue in the React app.
 
 Files to update:
-- server.js (complete enhanced version with all fixes)
+- server.js (add CORS middleware)
 
 ## Status
 ⏳ Ready for code update
