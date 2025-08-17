@@ -49,12 +49,6 @@ let activeZones = {
   bluetooth: false
 };
 // Socket.IO with CORS configuration
-const io = socketIo(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
-  }
-});
 
 // CORS headers for HTTP requests
 app.use((req, res, next) => {
@@ -65,10 +59,6 @@ app.use((req, res, next) => {
 });
 
 // Configuration
-const PORT = process.env.PORT || 3000;
-const MUSIC_DIR = path.join(__dirname, 'music');
-const SNAPCAST_FIFO = '/tmp/snapfifo';
-const FFMPEG_PATH = '/opt/homebrew/bin/ffmpeg';
 
 // State management
 let musicFiles = [];
