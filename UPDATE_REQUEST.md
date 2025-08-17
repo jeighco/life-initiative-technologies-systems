@@ -1,17 +1,12 @@
-# Update Request: Add latency control UI to React app
+# Update Request: Test React automation fix - add simple button
 
 ## Requested Changes
-Add UI controls to the React app for adjusting latency compensation settings.
+Add a simple Test Automation button to the React app that shows an alert when clicked.
 
-Need sliders for:
-- Snapcast delay (0-100ms)
-- Chromecast delay (0-200ms) 
-- Bluetooth delay (100-500ms)
-
-Plus checkboxes to enable/disable each zone.
+This is to test that the GitHub automation properly adds real React code to PRs.
 
 Files to update:
-- src/App.js (add latency control component)
+- src/App.js (add test button component)
 
 ## Status
 ⏳ Ready for code update
