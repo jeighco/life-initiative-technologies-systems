@@ -1,4 +1,3 @@
-cat > server.js << 'EOF'
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -8,24 +7,52 @@ const multer = require('multer');
 const { spawn } = require('child_process');
 
 const app = express();
-const server = http.createServer(app);
-const io = socketIo(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
+
+// CORS headers for HTTP requests
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
   }
 });
 
-// Configuration
+const server = http.createServer(app);
+
+// Socket.IO with CORS configuration
+const io = socketIo(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
+});
+
+// Configuration with enhanced latency settings
 const config = {
   musicDir: path.join(__dirname, 'music'),
   snapcastFifo: '/tmp/snapfifo',
   port: 3000,
-  // Enhanced sync settings
-  bufferSize: '128k',  // Increased from 64k for better sync
+  bufferSize: '128k',
   audioFormat: 's16le',
   sampleRate: 48000,
   channels: 2
+};
+
+// Latency compensation configuration
+const AUDIO_DELAYS = {
+  snapcast: 0,      // Reference timing (no delay)
+  chromecast: 50,   // Chromecast network delay
+  bluetooth: 250    // Bluetooth latency compensation
+};
+
+// Active zones configuration
+let activeZones = {
+  snapcast: true,
+  chromecast: false,
+  bluetooth: false
 };
 
 // State management
@@ -56,6 +83,18 @@ function log(message, type = 'info') {
   console.log(`[${timestamp}] ${prefix} ${message}`);
 }
 
+// Latency compensation function
+function delayAudioStream(delayMs) {
+  return new Promise(resolve => {
+    if (delayMs > 0) {
+      log(`⏱️ Applying ${delayMs}ms delay for sync compensation`);
+      setTimeout(resolve, delayMs);
+    } else {
+      resolve();
+    }
+  });
+}
+
 // Enhanced silence stream with sub-audible 20Hz tone
 function startSilenceStream() {
   if (silenceProcess) {
@@ -65,23 +104,18 @@ function startSilenceStream() {
 
   log('🔇 Starting continuous silence stream to keep FIFO active');
   
-  // Sub-audible 20Hz tone at 0.1% volume - inaudible but keeps stream active
   const silenceCmd = [
     '-f', 'lavfi',
     '-i', 'sine=frequency=20:sample_rate=48000',
     '-f', config.audioFormat,
     '-ar', config.sampleRate.toString(),
     '-ac', config.channels.toString(),
-    '-filter:a', 'volume=0.001',  // 0.1% volume - virtually inaudible
+    '-filter:a', 'volume=0.001',
     '-bufsize', config.bufferSize,
     '-y', config.snapcastFifo
   ];
 
   silenceProcess = spawn('ffmpeg', silenceCmd);
-
-  silenceProcess.stdout.on('data', (data) => {
-    // Silent - don't log normal output
-  });
 
   silenceProcess.stderr.on('data', (data) => {
     const output = data.toString();
@@ -93,7 +127,6 @@ function startSilenceStream() {
   silenceProcess.on('close', (code) => {
     log(`Silence stream ended with code ${code}`, 'error');
     silenceProcess = null;
-    // Auto-restart silence stream
     setTimeout(() => {
       if (!isPlaying) {
         startSilenceStream();
@@ -106,8 +139,7 @@ function startSilenceStream() {
     silenceProcess = null;
   });
 
-  log('✅ Silence stream process spawned successfully');
-  log('🎵 Silence stream started - Snapcast should stay active');
+  log('✅ Silence stream started - Snapcast should stay active');
 }
 
 // Stop silence stream
@@ -119,130 +151,136 @@ function stopSilenceStream() {
   }
 }
 
-// Enhanced audio streaming with dual output (FIFO + HTTP)
-function startAudioStream(filePath) {
-  return new Promise((resolve, reject) => {
-    if (currentFFmpegProcess) {
-      currentFFmpegProcess.kill('SIGTERM');
-      currentFFmpegProcess = null;
-    }
-
-    // Stop silence stream when starting music
-    stopSilenceStream();
-
-    log(`🎵 Starting audio stream: ${path.basename(filePath)}`);
-
-    // Enhanced FFmpeg command with better sync settings
-    const ffmpegArgs = [
-      '-i', filePath,
-      '-f', config.audioFormat,
-      '-ar', config.sampleRate.toString(),
-      '-ac', config.channels.toString(),
-      '-bufsize', config.bufferSize,
-      '-af', 'aresample=async=1',  // Audio resampling for better sync
-      '-y', config.snapcastFifo
-    ];
-
-    currentFFmpegProcess = spawn('ffmpeg', ffmpegArgs);
-
-    // Start HTTP streaming simultaneously for Chromecast
-    startHttpStream(filePath);
-
-    let resolved = false;
-
-    currentFFmpegProcess.stdout.on('data', (data) => {
-      if (!resolved) {
-        resolved = true;
-        resolve();
-      }
-    });
-
-    currentFFmpegProcess.stderr.on('data', (data) => {
-      const output = data.toString();
+// Enhanced audio streaming with latency compensation
+function startAudioStreamWithCompensation(filePath) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      // Apply latency compensation delay
+      const maxDelay = Math.max(...Object.values(AUDIO_DELAYS));
+      const snapcastDelay = maxDelay - AUDIO_DELAYS.snapcast;
       
-      // Parse duration from FFmpeg output
-      const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2})/);
-      if (durationMatch) {
-        const hours = parseInt(durationMatch[1]);
-        const minutes = parseInt(durationMatch[2]);
-        const seconds = parseInt(durationMatch[3]);
-        trackDuration = hours * 3600 + minutes * 60 + seconds;
-        log(`Track duration: ${trackDuration} seconds`);
+      if (snapcastDelay > 0) {
+        await delayAudioStream(snapcastDelay);
       }
 
-      // Parse current time for position tracking
-      const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2})/);
-      if (timeMatch) {
-        const hours = parseInt(timeMatch[1]);
-        const minutes = parseInt(timeMatch[2]);
-        const seconds = parseInt(timeMatch[3]);
-        currentPosition = hours * 3600 + minutes * 60 + seconds;
+      if (currentFFmpegProcess) {
+        currentFFmpegProcess.kill('SIGTERM');
+        currentFFmpegProcess = null;
       }
 
-      // Only log significant events, not the constant progress updates
-      if (!output.includes('size=') && !output.includes('time=') && !output.includes('bitrate=')) {
-        log(`FFmpeg: ${output.trim()}`);
-      }
-    });
+      stopSilenceStream();
+      log(`🎵 Starting audio stream: ${path.basename(filePath)}`);
 
-    currentFFmpegProcess.on('close', (code) => {
-      log(`Audio stream ended with code ${code}`);
-      currentFFmpegProcess = null;
-      stopHttpStream();
-      
-      // Auto-advance to next track or restart silence
-      if (code === 0 && queue.length > 0) {
-        log('🔄 Auto-advancing to next track');
+      const ffmpegArgs = [
+        '-i', filePath,
+        '-f', config.audioFormat,
+        '-ar', config.sampleRate.toString(),
+        '-ac', config.channels.toString(),
+        '-bufsize', config.bufferSize,
+        '-af', 'aresample=async=1',
+        '-y', config.snapcastFifo
+      ];
+
+      currentFFmpegProcess = spawn('ffmpeg', ffmpegArgs);
+
+      // Start HTTP streaming for Chromecast with delay compensation
+      if (activeZones.chromecast) {
+        const chromecastDelay = maxDelay - AUDIO_DELAYS.chromecast;
         setTimeout(() => {
-          playNext();
-        }, 500); // Small delay for smooth transition
-      } else {
-        // Restart silence stream when music ends
+          startHttpStream(filePath);
+        }, chromecastDelay);
+      }
+
+      let resolved = false;
+
+      currentFFmpegProcess.stdout.on('data', (data) => {
+        if (!resolved) {
+          resolved = true;
+          resolve();
+        }
+      });
+
+      currentFFmpegProcess.stderr.on('data', (data) => {
+        const output = data.toString();
+        
+        const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2})/);
+        if (durationMatch) {
+          const hours = parseInt(durationMatch[1]);
+          const minutes = parseInt(durationMatch[2]);
+          const seconds = parseInt(durationMatch[3]);
+          trackDuration = hours * 3600 + minutes * 60 + seconds;
+          log(`Track duration: ${trackDuration} seconds`);
+        }
+
+        const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2})/);
+        if (timeMatch) {
+          const hours = parseInt(timeMatch[1]);
+          const minutes = parseInt(timeMatch[2]);
+          const seconds = parseInt(timeMatch[3]);
+          currentPosition = hours * 3600 + minutes * 60 + seconds;
+        }
+
+        if (!output.includes('size=') && !output.includes('time=') && !output.includes('bitrate=')) {
+          log(`FFmpeg: ${output.trim()}`);
+        }
+      });
+
+      currentFFmpegProcess.on('close', (code) => {
+        log(`Audio stream ended with code ${code}`);
+        currentFFmpegProcess = null;
+        stopHttpStream();
+        
+        if (code === 0 && queue.length > 0) {
+          log('🔄 Auto-advancing to next track');
+          setTimeout(() => {
+            playNext();
+          }, 300);
+        } else {
+          isPlaying = false;
+          currentTrack = null;
+          currentPosition = 0;
+          trackDuration = 0;
+          clearInterval(positionInterval);
+          
+          setTimeout(() => {
+            startSilenceStream();
+          }, 1000);
+          
+          io.emit('trackEnded');
+          io.emit('statusUpdate', getStatus());
+        }
+
+        if (!resolved) {
+          resolved = true;
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`FFmpeg exited with code ${code}`));
+          }
+        }
+      });
+
+      currentFFmpegProcess.on('error', (error) => {
+        log(`Audio stream error: ${error.message}`, 'error');
+        currentFFmpegProcess = null;
+        stopHttpStream();
+        
         isPlaying = false;
         currentTrack = null;
-        currentPosition = 0;
-        trackDuration = 0;
-        clearInterval(positionInterval);
-        
         setTimeout(() => {
           startSilenceStream();
         }, 1000);
         
-        // Notify clients
-        io.emit('trackEnded');
-        io.emit('statusUpdate', getStatus());
-      }
-
-      if (!resolved) {
-        resolved = true;
-        if (code === 0) {
-          resolve();
-        } else {
-          reject(new Error(`FFmpeg exited with code ${code}`));
+        if (!resolved) {
+          resolved = true;
+          reject(error);
         }
-      }
-    });
+      });
 
-    currentFFmpegProcess.on('error', (error) => {
-      log(`Audio stream error: ${error.message}`, 'error');
-      currentFFmpegProcess = null;
-      stopHttpStream();
-      
-      // Restart silence stream on error
-      isPlaying = false;
-      currentTrack = null;
-      setTimeout(() => {
-        startSilenceStream();
-      }, 1000);
-      
-      if (!resolved) {
-        resolved = true;
-        reject(error);
-      }
-    });
-
-    // Start position tracking
-    startPositionTracking();
+      startPositionTracking();
+    } catch (error) {
+      reject(error);
+    }
   });
 }
 
@@ -255,7 +293,6 @@ function startHttpStream(filePath) {
 
   log('📡 Starting HTTP stream for Chromecast');
 
-  // Stream MP3 over HTTP for Chromecast compatibility
   const httpArgs = [
     '-i', filePath,
     '-f', 'mp3',
@@ -325,7 +362,6 @@ function playNext() {
     isPlaying = false;
     currentTrack = null;
     
-    // Restart silence stream when queue is empty
     setTimeout(() => {
       startSilenceStream();
     }, 1000);
@@ -341,13 +377,12 @@ function playNext() {
 
   log(`▶️ Playing: ${currentTrack.name}`);
 
-  startAudioStream(currentTrack.path)
+  startAudioStreamWithCompensation(currentTrack.path)
     .then(() => {
       io.emit('statusUpdate', getStatus());
     })
     .catch((error) => {
       log(`Playback error: ${error.message}`, 'error');
-      // Try next track or restart silence
       if (queue.length > 0) {
         setTimeout(() => playNext(), 1000);
       } else {
@@ -374,7 +409,6 @@ function stopPlayback() {
   trackDuration = 0;
   clearInterval(positionInterval);
   
-  // Restart silence stream when stopping
   setTimeout(() => {
     startSilenceStream();
   }, 1000);
@@ -390,9 +424,90 @@ function getStatus() {
     queue: queue.map(track => ({ name: track.name })),
     position: currentPosition,
     duration: trackDuration,
-    queueLength: queue.length
+    queueLength: queue.length,
+    latencySettings: AUDIO_DELAYS,
+    activeZones: activeZones
   };
 }
+
+// Latency compensation API endpoints
+app.get('/api/latency', (req, res) => {
+  res.json({
+    delays: AUDIO_DELAYS,
+    activeZones: activeZones
+  });
+});
+
+app.post('/api/latency/delays', (req, res) => {
+  const { snapcast, chromecast, bluetooth } = req.body;
+  
+  if (snapcast !== undefined) AUDIO_DELAYS.snapcast = parseInt(snapcast);
+  if (chromecast !== undefined) AUDIO_DELAYS.chromecast = parseInt(chromecast);
+  if (bluetooth !== undefined) AUDIO_DELAYS.bluetooth = parseInt(bluetooth);
+  
+  log(`🎛️ Latency delays updated: ${JSON.stringify(AUDIO_DELAYS)}`);
+  
+  // Broadcast updated settings to all clients
+  io.emit('latencyUpdate', { delays: AUDIO_DELAYS, activeZones });
+  
+  res.json({ success: true, delays: AUDIO_DELAYS });
+});
+
+app.post('/api/latency/zones', (req, res) => {
+  const { snapcast, chromecast, bluetooth } = req.body;
+  
+  if (snapcast !== undefined) activeZones.snapcast = !!snapcast;
+  if (chromecast !== undefined) activeZones.chromecast = !!chromecast;
+  if (bluetooth !== undefined) activeZones.bluetooth = !!bluetooth;
+  
+  log(`🎛️ Active zones updated: ${JSON.stringify(activeZones)}`);
+  
+  // Broadcast updated settings to all clients
+  io.emit('latencyUpdate', { delays: AUDIO_DELAYS, activeZones });
+  
+  res.json({ success: true, activeZones });
+});
+
+// Test sync endpoint
+app.post('/api/latency/test', (req, res) => {
+  log('🔊 Playing sync test tone');
+  
+  const testTonePath = path.join(__dirname, 'test-tone.wav');
+  
+  // Generate a short test tone
+  const testToneCmd = [
+    '-f', 'lavfi',
+    '-i', 'sine=frequency=1000:duration=1',
+    '-y', testTonePath
+  ];
+  
+  const testToneProcess = spawn('ffmpeg', testToneCmd);
+  
+  testToneProcess.on('close', (code) => {
+    if (code === 0) {
+      // Play the test tone through the current audio system
+      if (fs.existsSync(testTonePath)) {
+        startAudioStreamWithCompensation(testTonePath)
+          .then(() => {
+            res.json({ success: true, message: 'Test tone played' });
+            // Clean up test file
+            setTimeout(() => {
+              if (fs.existsSync(testTonePath)) {
+                fs.unlinkSync(testTonePath);
+              }
+            }, 2000);
+          })
+          .catch((error) => {
+            res.status(500).json({ error: error.message });
+          });
+      } else {
+        res.status(500).json({ error: 'Failed to generate test tone' });
+      }
+    } else {
+      res.status(500).json({ error: 'Failed to generate test tone' });
+    }
+  });
+});
 
 // HTTP streaming endpoint for Chromecast
 app.get('/stream/current', (req, res) => {
@@ -407,10 +522,8 @@ app.get('/stream/current', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  // Track HTTP clients
   httpClients.add(res);
 
-  // Pipe FFmpeg output to HTTP response
   if (httpStreamProcess && httpStreamProcess.stdout) {
     httpStreamProcess.stdout.pipe(res);
   }
@@ -434,11 +547,10 @@ app.use('/music', express.static(config.musicDir));
 io.on('connection', (socket) => {
   log(`Client connected: ${socket.id}`);
 
-  // Send current status
   socket.emit('statusUpdate', getStatus());
   socket.emit('musicFiles', getMusicFiles());
+  socket.emit('latencyUpdate', { delays: AUDIO_DELAYS, activeZones });
 
-  // Add to queue
   socket.on('addToQueue', (filename) => {
     const musicFiles = getMusicFiles();
     const file = musicFiles.find(f => f.name === filename);
@@ -448,14 +560,12 @@ io.on('connection', (socket) => {
       log(`➕ Added to queue: ${filename}`);
       io.emit('statusUpdate', getStatus());
       
-      // Auto-start if not playing
       if (!isPlaying && queue.length === 1) {
         playNext();
       }
     }
   });
 
-  // Control commands
   socket.on('play', () => {
     if (!isPlaying && queue.length > 0) {
       playNext();
@@ -463,7 +573,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('pause', () => {
-    // Note: Pause/resume is complex with FFmpeg - for now we stop
     stopPlayback();
   });
 
@@ -514,7 +623,9 @@ app.get('/health', (req, res) => {
     currentTrack: currentTrack ? currentTrack.name : null,
     queueLength: queue.length,
     silenceActive: !!silenceProcess,
-    httpStreamActive: !!httpStreamProcess
+    httpStreamActive: !!httpStreamProcess,
+    latencySettings: AUDIO_DELAYS,
+    activeZones: activeZones
   });
 });
 
@@ -550,7 +661,6 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Initialize server
 function initialize() {
-  // Ensure music directory exists
   if (!fs.existsSync(config.musicDir)) {
     fs.mkdirSync(config.musicDir, { recursive: true });
   }
@@ -566,7 +676,9 @@ function initialize() {
     sampleRate: config.sampleRate
   })}`);
 
-  // Start continuous silence stream to keep Snapcast active
+  log(`🎛️ Latency compensation enabled: ${JSON.stringify(AUDIO_DELAYS)}`);
+  log(`🎛️ Active zones: ${JSON.stringify(activeZones)}`);
+
   startSilenceStream();
 }
 
@@ -574,4 +686,3 @@ function initialize() {
 server.listen(config.port, () => {
   initialize();
 });
-EOF
