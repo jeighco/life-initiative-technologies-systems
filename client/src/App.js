@@ -116,6 +116,10 @@ const App = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
   const [castAvailable, setCastAvailable] = useState(false);
+const [latencySettings, setLatencySettings] = useState({
+    delays: { snapcast: 0, chromecast: 50, bluetooth: 250 },
+    activeZones: { snapcast: true, chromecast: false, bluetooth: false }
+  });
   const [castConnected, setCastConnected] = useState(false);
 
   // Stable Socket.IO Connection with better cleanup
@@ -162,6 +166,7 @@ const App = () => {
         setConnectionStatus('connected');
         setError(null);
         setSocket(newSocket);
+        fetchLatencySettings();
       });
 
       newSocket.on('disconnect', (reason) => {
@@ -238,6 +243,11 @@ const App = () => {
 
       newSocket.on('upload_progress', (progress) => {
         setUploadProgress(progress);
+      });
+
+
+      newSocket.on('latencyUpdate', (data) => {
+        setLatencySettings(data);
       });
 
       // Start the connection
@@ -610,6 +620,57 @@ const App = () => {
     }
 
     event.target.value = '';
+
+  // Latency control functions
+  const fetchLatencySettings = async () => {
+    try {
+      const response = await fetch(`${serverAddress}/api/latency`);
+      const data = await response.json();
+      setLatencySettings(data);
+    } catch (error) {
+      console.error('Failed to fetch latency settings:', error);
+    }
+  };
+
+  const updateDelay = async (zone, delay) => {
+    try {
+      const response = await fetch(`${serverAddress}/api/latency/delays`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [zone]: delay })
+      });
+      setLatencySettings(prev => ({
+        ...prev,
+        delays: { ...prev.delays, [zone]: delay }
+      }));
+    } catch (error) {
+      console.error('Failed to update delay:', error);
+    }
+  };
+
+  const updateActiveZone = async (zone, active) => {
+    try {
+      const response = await fetch(`${serverAddress}/api/latency/zones`, {
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [zone]: active })
+      });
+      setLatencySettings(prev => ({
+        ...prev,
+        activeZones: { ...prev.activeZones, [zone]: active }
+      }));
+    } catch (error) {
+      console.error('Failed to update zone:', error);
+    }
+  };
+
+  const testSync = async () => {
+    try {
+      await fetch(`${serverAddress}/api/latency/test`, { method: 'POST' });
+    } catch (error) {
+      console.error('Failed to test sync:', error);
+    }
+  };
   };
 
   const getStatusText = () => {
@@ -633,6 +694,64 @@ const App = () => {
             />
           </div>
 
+
+          {/* Latency Control Panel */}
+          <div className="mb-8 bg-gray-800 rounded-lg p-6">
+            <h2 className="text-xl font-bold mb-4">🎚️ Audio Sync Controls</h2>
+            
+            {/* Zone Selection */}
+            <div className="mb-6">
+              <h3 className="text-lg font-medium mb-3">Active Zones</h3>
+              <div className="flex gap-6">
+                {Object.entries(latencySettings.activeZones).map(([zone, active]) => (
+                  <label key={zone} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={active}
+                      onChange={(e) => updateActiveZone(zone, e.target.checked)}
+                      className="w-4 h-4"
+                      disabled={connectionStatus !== 'connected'}
+                    />
+                    <span className="capitalize">{zone}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Delay Sliders */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium mb-3">Delay Compensation</h3>
+              {Object.entries(latencySettings.delays).map(([zone, delay]) => (
+                <div key={zone} className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="capitalize font-medium">{zone}</span>
+                    <span className="text-sm text-gray-400">{delay}ms</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={zone === 'bluetooth' ? 100 : 0}
+                    max={zone === 'snapcast' ? 100 : zone === 'chromecast' ? 200 : 500}
+                    step="10"
+                    value={delay}
+                    onChange={(e) => updateDelay(zone, parseInt(e.target.value))}
+                    disabled={connectionStatus !== 'connected'}
+                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Test Sync Button */}
+            <div className="mt-6">
+              <button
+                onClick={testSync}
+                disabled={connectionStatus !== 'connected'}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 px-4 py-2 rounded"
+              >
+                🔊 Test Sync
+              </button>
+            </div>
+          </div>
           {/* Error Display */}
           {error && (
             <div className="mb-6 bg-red-500/10 border border-red-500/20 rounded-lg p-4">
