@@ -4,32 +4,42 @@ const socketIo = require('socket.io');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
-const cors = require('cors');
 const { spawn } = require('child_process');
 
 const app = express();
-app.use(cors());
 const server = http.createServer(app);
+
+// Socket.IO with CORS configuration
 const io = socketIo(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
+app.use(cors());  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
+});
+
+// CORS headers for HTTP requests
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
   }
 });
 
 // Configuration
-const config = {
-  port: 3000,
-  musicDir: path.join(__dirname, 'music'),
-  snapcastFifo: '/tmp/snapfifo',
-  ffmpegPath: '/opt/homebrew/bin/ffmpeg'
-};
+const PORT = 3000;
+const MUSIC_DIR = path.join(__dirname, 'music');
+const SNAPCAST_FIFO = '/tmp/snapfifo';
+const FFMPEG_PATH = '/opt/homebrew/bin/ffmpeg';
 
-// Audio delay configuration for sync compensation
+// Latency compensation configuration
 const AUDIO_DELAYS = {
-  snapcast: 0,     // Reference timing (no delay)
-  chromecast: 50,  // Chromecast network delay
-  bluetooth: 250   // Bluetooth latency compensation
+  snapcast: 0,      // Reference timing (no delay)
+  chromecast: 50,   // Chromecast network delay
+  bluetooth: 250    // Bluetooth latency compensation
 };
 
 // Active zones configuration
@@ -38,6 +48,8 @@ let activeZones = {
   chromecast: false,
   bluetooth: false
 };
+// Socket.IO with CORS configuration
+
 // CORS headers for HTTP requests
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
@@ -47,10 +59,6 @@ app.use((req, res, next) => {
 });
 
 // Configuration
-const PORT = process.env.PORT || 3000;
-const MUSIC_DIR = path.join(__dirname, 'music');
-const SNAPCAST_FIFO = '/tmp/snapfifo';
-const FFMPEG_PATH = '/opt/homebrew/bin/ffmpeg';
 
 // State management
 let musicFiles = [];
@@ -735,6 +743,25 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Start server
+
+// Latency compensation API endpoints
+app.get('/api/latency', (req, res) => {
+  res.json({
+    delays: AUDIO_DELAYS,
+    activeZones: activeZones
+  });
+});
+
+app.post('/api/latency/delays', (req, res) => {
+  const { snapcast, chromecast, bluetooth } = req.body;
+  if (snapcast !== undefined) AUDIO_DELAYS.snapcast = parseInt(snapcast);
+  if (chromecast !== undefined) AUDIO_DELAYS.chromecast = parseInt(chromecast);
+  if (bluetooth !== undefined) AUDIO_DELAYS.bluetooth = parseInt(bluetooth);
+  console.log(`🎛️ Latency delays updated: ${JSON.stringify(AUDIO_DELAYS)}`);
+  io.emit('latencyUpdate', { delays: AUDIO_DELAYS, activeZones });
+  res.json({ success: true, delays: AUDIO_DELAYS });
+});
+
 server.listen(PORT, () => {
   logger.success(`🎵 Snapcast Music Server running on port ${PORT}`);
   

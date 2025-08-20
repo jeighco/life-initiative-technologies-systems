@@ -1,17 +1,17 @@
-# Update Request: Fix CORS issue for music file loading
+# Update Request: Add latency control UI to React app
 
 ## Requested Changes
-React app can't load music files due to CORS policy blocking HTTP requests.
+Add UI controls to the React app for adjusting latency compensation settings.
 
-Need to add CORS middleware to server.js:
+Need sliders for:
+- Snapcast delay (0-100ms)
+- Chromecast delay (0-200ms) 
+- Bluetooth delay (100-500ms)
 
-1. Add  to the imports
-2. Add  after creating the express app
-
-The cors package is already installed. This will fix the No music files found issue in the React app.
+Plus checkboxes to enable/disable each zone.
 
 Files to update:
-- server.js (add CORS middleware)
+- src/App.js (add latency control component)
 
 ## Status
 ⏳ Ready for code update
