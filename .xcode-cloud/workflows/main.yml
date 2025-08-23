@@ -1,0 +1,68 @@
+name: Multi-Room Music CI/CD
+description: Automated build, test, and deployment pipeline for Multi-Room Music iOS app
+
+trigger:
+  branches:
+    - main
+    - develop
+  pull_requests:
+    - main
+
+environment:
+  xcode: 14.3.1
+  macos: 13.0
+
+variables:
+  - name: MARKETING_VERSION
+    value: "1.0.0"
+  - name: CURRENT_PROJECT_VERSION
+    value: "1"
+  - name: PRODUCT_BUNDLE_IDENTIFIER
+    value: "com.iniviv.multiroommusicapp"
+
+actions:
+  # Development builds for testing
+  - name: Test Build
+    scheme: MultiRoomMusicApp
+    configuration: Debug
+    platform: iOS Simulator
+    device: iPhone 15
+    conditions:
+      - branch: develop
+      - pull_request: main
+    
+  # Production builds for main branch
+  - name: Production Build and Archive
+    scheme: MultiRoomMusicApp
+    configuration: Release
+    platform: iOS
+    archive: true
+    upload_to_testflight: true
+    conditions:
+      - branch: main
+      
+  # Tagged releases for App Store
+  - name: App Store Release
+    scheme: MultiRoomMusicApp
+    configuration: Release
+    platform: iOS
+    archive: true
+    upload_to_app_store: false # Manual approval required
+    conditions:
+      - tag: v*
+
+post_actions:
+  # Run unit tests
+  - name: Run Tests
+    script: |
+      echo "Running iOS unit tests..."
+      cd MultiRoomMusicApp
+      npm test -- --coverage --watchAll=false
+      
+  # Generate build artifacts
+  - name: Archive Logs
+    script: |
+      echo "Archiving build logs and reports..."
+      mkdir -p $CI_ARTIFACTS_PATH
+      cp -r logs/ $CI_ARTIFACTS_PATH/ || true
+      cp -r reports/ $CI_ARTIFACTS_PATH/ || true

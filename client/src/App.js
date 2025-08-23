@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Pause, SkipForward, Upload, Trash2, WifiOff, Wifi, AlertCircle, RefreshCw, Cast } from 'lucide-react';
+import { Play, Pause, SkipForward, Upload, Trash2, WifiOff, Wifi, AlertCircle, RefreshCw, Cast, Volume2, VolumeX, Users, Edit3, Move, Settings, Search, Music } from 'lucide-react';
 
 const SERVER_IP = '192.168.12.125';
 const serverAddress = `http://${SERVER_IP}:3000`;
@@ -116,11 +116,31 @@ const App = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
   const [castAvailable, setCastAvailable] = useState(false);
-const [latencySettings, setLatencySettings] = useState({
-    delays: { snapcast: 0, chromecast: 50, bluetooth: 250 },
-    activeZones: { snapcast: true, chromecast: false, bluetooth: false }
-  });
   const [castConnected, setCastConnected] = useState(false);
+  const [castDevice, setCastDevice] = useState(null);
+  const [castRetryCount, setCastRetryCount] = useState(0);
+  const [latencyDelays, setLatencyDelays] = useState({
+    snapcast: 0,
+    chromecast: 50,
+    bluetooth: 250
+  });
+  const [activeZones, setActiveZones] = useState({
+    snapcast: true,
+    chromecast: false,
+    bluetooth: false
+  });
+  const [snapcastConnected, setSnapcastConnected] = useState(false);
+  const [snapcastClients, setSnapcastClients] = useState([]);
+  const [snapcastGroups, setSnapcastGroups] = useState([]);
+  const [snapcastStatus, setSnapcastStatus] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  
+  // Sync monitoring state
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [showSyncMonitoring, setShowSyncMonitoring] = useState(false);
 
   // Stable Socket.IO Connection with better cleanup
   const connectSocket = useCallback(() => {
@@ -166,7 +186,6 @@ const [latencySettings, setLatencySettings] = useState({
         setConnectionStatus('connected');
         setError(null);
         setSocket(newSocket);
-        fetchLatencySettings();
       });
 
       newSocket.on('disconnect', (reason) => {
@@ -245,9 +264,22 @@ const [latencySettings, setLatencySettings] = useState({
         setUploadProgress(progress);
       });
 
-
       newSocket.on('latencyUpdate', (data) => {
-        setLatencySettings(data);
+        console.log('🎛️ Latency settings updated:', data);
+        setLatencyDelays(data.delays);
+        setActiveZones(data.activeZones);
+      });
+
+      newSocket.on('snapcast_connected', (connected) => {
+        console.log('📡 Snapcast connection status:', connected);
+        setSnapcastConnected(connected);
+      });
+
+      newSocket.on('snapcast_status', (data) => {
+        console.log('📊 Snapcast status updated:', data);
+        setSnapcastStatus(data.status);
+        setSnapcastClients(data.clients);
+        setSnapcastGroups(data.groups);
       });
 
       // Start the connection
@@ -295,6 +327,67 @@ const [latencySettings, setLatencySettings] = useState({
       return () => clearTimeout(retryTimer);
     }
   }, [socket, connectionStatus, connectSocket]);
+
+  // Fetch latency settings and Snapcast status when connected
+  useEffect(() => {
+    if (connectionStatus === 'connected') {
+      fetchLatencySettings();
+      fetchSnapcastStatus();
+      fetchSyncStatus();
+    }
+  }, [connectionStatus]);
+
+  // Chromecast connection monitor
+  useEffect(() => {
+    if (!castAvailable) return;
+
+    const monitorCastConnection = () => {
+      try {
+        const context = window.cast?.framework?.CastContext?.getInstance();
+        if (!context) return;
+
+        const session = context.getCurrentSession();
+        const actuallyConnected = !!session;
+        
+        // Check if our state is out of sync
+        if (castConnected !== actuallyConnected) {
+          console.log(`📺 Connection state mismatch. Expected: ${castConnected}, Actual: ${actuallyConnected}`);
+          setCastConnected(actuallyConnected);
+          
+          if (!actuallyConnected) {
+            setCastDevice(null);
+            setCastRetryCount(0);
+            console.log('📺 Cast device disconnected unexpectedly');
+          }
+        }
+        
+        // If we think we're connected but session is null, try to recover
+        if (castConnected && !session) {
+          console.log('📺 Cast session lost, attempting recovery...');
+          setCastConnected(false);
+          setCastDevice(null);
+        }
+        
+      } catch (error) {
+        console.warn('📺 Cast connection monitor error:', error);
+      }
+    };
+
+    // Monitor every 10 seconds
+    const monitorInterval = setInterval(monitorCastConnection, 10000);
+
+    return () => {
+      clearInterval(monitorInterval);
+    };
+  }, [castAvailable, castConnected]);
+
+  // Periodic sync status updates
+  useEffect(() => {
+    if (connectionStatus !== 'connected') return;
+    
+    const syncRefreshInterval = setInterval(fetchSyncStatus, 15000);
+    return () => clearInterval(syncRefreshInterval);
+  }, [connectionStatus]);
 
   // Chromecast initialization with fallback
   const initializeCast = () => {
@@ -444,17 +537,52 @@ const [latencySettings, setLatencySettings] = useState({
       setCastAvailable(true);
       console.log('📺 Cast button should now be visible');
 
-      // Add session state listener
+      // Add session state listener with enhanced monitoring
       try {
         context.addEventListener(window.cast.framework.CastContextEventType.SESSION_STATE_CHANGED, (event) => {
           const session = context.getCurrentSession();
           const connected = !!session;
           console.log('📺 Cast session state changed:', connected ? 'Connected' : 'Disconnected');
-          setCastConnected(connected);
           
-          if (session && isPlaying && currentTrackIndex >= 0) {
-            startCasting(queue[currentTrackIndex]);
+          if (connected && session) {
+            // Extract device information
+            const deviceInfo = {
+              name: session.getSessionObj()?.receiver?.friendlyName || 'Unknown Device',
+              id: session.getSessionObj()?.receiver?.receiverId || null,
+              capabilities: session.getSessionObj()?.receiver?.capabilities || []
+            };
+            setCastDevice(deviceInfo);
+            console.log(`📺 Connected to: ${deviceInfo.name}`);
+            
+            // Reset retry count on successful connection
+            setCastRetryCount(0);
+            
+            // Add session event listeners for better error handling
+            session.addUpdateListener((isAlive) => {
+              if (!isAlive) {
+                console.log('📺 Cast session ended');
+                setCastConnected(false);
+                setCastDevice(null);
+              }
+            });
+            
+            // Add media session listeners
+            session.addMessageListener('urn:x-cast:com.google.cast.media', (namespace, message) => {
+              console.log('📺 Cast media message:', message);
+            });
+            
+            // Auto-start casting if music is playing
+            if (isPlaying && currentTrackIndex >= 0) {
+              setTimeout(() => {
+                startCasting(queue[currentTrackIndex]);
+              }, 1000); // Small delay to ensure session is ready
+            }
+          } else {
+            setCastDevice(null);
+            console.log('📺 Cast session disconnected');
           }
+          
+          setCastConnected(connected);
         });
       } catch (listenerError) {
         console.error('📺 Failed to add session listener:', listenerError);
@@ -481,46 +609,220 @@ const [latencySettings, setLatencySettings] = useState({
     }
   };
 
-  const startCasting = (track) => {
+  const startCasting = async (track, retryAttempt = 0) => {
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY_BASE = 2000; // Start with 2 seconds
+    
     try {
       const context = window.cast.framework.CastContext.getInstance();
       const session = context.getCurrentSession();
       
-      if (session && track) {
-        const mediaInfo = new window.chrome.cast.media.MediaInfo(
-          `${serverAddress}/stream/current`,
-          'audio/mpeg'
-        );
-        
-        mediaInfo.metadata = new window.chrome.cast.media.MusicTrackMediaMetadata();
-        mediaInfo.metadata.title = track.name;
-        mediaInfo.metadata.artist = 'Multi-Room Music';
-        
-        const request = new window.chrome.cast.media.LoadRequest(mediaInfo);
-        request.autoplay = true;
-        
-        session.loadMedia(request).catch(console.error);
+      if (!session) {
+        console.warn('📺 No active cast session available');
+        return false;
       }
+      
+      if (!track) {
+        console.warn('📺 No track provided for casting');
+        return false;
+      }
+      
+      console.log(`📺 Starting cast: ${track.name} (attempt ${retryAttempt + 1}/${MAX_RETRIES + 1})`);
+      
+      // Create media info with enhanced metadata and device-specific URL
+      let streamUrl;
+      if (track.streamUrl || track.previewUrl) {
+        // Use direct URLs for streaming services
+        streamUrl = track.streamUrl || track.previewUrl;
+      } else {
+        // Use device-specific endpoint to prevent conflicts between multiple Chromecasts
+        const deviceId = castDevice?.name ? encodeURIComponent(castDevice.name.replace(/\s+/g, '-')) : 'default';
+        streamUrl = `${serverAddress}/stream/device/${deviceId}`;
+      }
+      
+      console.log(`📺 Using stream URL: ${streamUrl}`);
+      const mediaInfo = new window.chrome.cast.media.MediaInfo(streamUrl, 'audio/mpeg');
+      
+      // Enhanced metadata
+      mediaInfo.metadata = new window.chrome.cast.media.MusicTrackMediaMetadata();
+      mediaInfo.metadata.title = track.name || 'Unknown Track';
+      mediaInfo.metadata.artist = track.artist || 'Multi-Room Music';
+      mediaInfo.metadata.albumName = track.album || 'Unknown Album';
+      
+      if (track.artwork) {
+        mediaInfo.metadata.images = [{
+          url: track.artwork,
+          height: 300,
+          width: 300
+        }];
+      }
+      
+      // Set duration if available
+      if (track.duration) {
+        mediaInfo.duration = track.duration;
+      }
+      
+      // Configure load request with better settings
+      const request = new window.chrome.cast.media.LoadRequest(mediaInfo);
+      request.autoplay = true;
+      request.currentTime = 0;
+      
+      // Add custom data for debugging
+      request.customData = {
+        trackId: track.id,
+        service: track.service || 'local',
+        timestamp: Date.now()
+      };
+      
+      try {
+        // Load media with timeout and error handling
+        const mediaSession = await session.loadMedia(request);
+        console.log(`📺 ✅ Successfully started casting: ${track.name} to ${castDevice?.name || 'device'}`);
+        
+        // Add media session event listeners
+        mediaSession.addUpdateListener((isAlive) => {
+          if (!isAlive) {
+            console.log('📺 Media session ended');
+          }
+        });
+        
+        // Listen for player state changes
+        mediaSession.addPlayerStateListener((playerState) => {
+          console.log('📺 Player state:', playerState);
+          
+          if (playerState === window.chrome.cast.media.PlayerState.IDLE) {
+            const idleReason = mediaSession.getIdleReason();
+            if (idleReason === window.chrome.cast.media.IdleReason.ERROR) {
+              console.error('📺 Playback error on cast device');
+              // Try to restart casting
+              if (retryAttempt < MAX_RETRIES) {
+                setTimeout(() => {
+                  console.log('📺 Retrying cast due to playback error...');
+                  startCasting(track, retryAttempt + 1);
+                }, RETRY_DELAY_BASE * Math.pow(2, retryAttempt));
+              }
+            } else if (idleReason === window.chrome.cast.media.IdleReason.FINISHED) {
+              console.log('📺 Track finished on cast device');
+            }
+          }
+        });
+        
+        setCastRetryCount(0); // Reset on success
+        return true;
+        
+      } catch (loadError) {
+        console.error('📺 Failed to load media:', loadError);
+        
+        // Handle specific error types
+        if (loadError.code === window.chrome.cast.ErrorCode.LOAD_MEDIA_FAILED) {
+          console.error('📺 Load media failed - possibly unsupported format or network issue');
+        } else if (loadError.code === window.chrome.cast.ErrorCode.SESSION_ERROR) {
+          console.error('📺 Session error during media load');
+        } else if (loadError.code === window.chrome.cast.ErrorCode.CHANNEL_ERROR) {
+          console.error('📺 Channel error during media load');
+        }
+        
+        // Retry logic with exponential backoff
+        if (retryAttempt < MAX_RETRIES) {
+          const retryDelay = RETRY_DELAY_BASE * Math.pow(2, retryAttempt);
+          console.log(`📺 Retrying in ${retryDelay}ms... (attempt ${retryAttempt + 1}/${MAX_RETRIES})`);
+          
+          setCastRetryCount(retryAttempt + 1);
+          
+          setTimeout(() => {
+            startCasting(track, retryAttempt + 1);
+          }, retryDelay);
+          
+          return false;
+        } else {
+          console.error(`📺 Failed to cast after ${MAX_RETRIES} attempts, giving up`);
+          setError({
+            code: 'CAST_ERROR',
+            message: `Failed to cast "${track.name}" after ${MAX_RETRIES} attempts`
+          });
+          setCastRetryCount(0);
+          return false;
+        }
+      }
+      
     } catch (error) {
-      console.error('Cast error:', error);
+      console.error('📺 Cast error:', error);
+      
+      // Retry for general errors too
+      if (retryAttempt < MAX_RETRIES) {
+        const retryDelay = RETRY_DELAY_BASE * Math.pow(2, retryAttempt);
+        console.log(`📺 General error, retrying in ${retryDelay}ms...`);
+        
+        setTimeout(() => {
+          startCasting(track, retryAttempt + 1);
+        }, retryDelay);
+      }
+      
+      return false;
     }
   };
 
-  const toggleCast = () => {
+  const toggleCast = async () => {
     try {
       const context = window.cast.framework.CastContext.getInstance();
       
       if (castConnected) {
-        context.getCurrentSession()?.endSession(true);
+        console.log('📺 Disconnecting from cast device...');
+        const session = context.getCurrentSession();
+        if (session) {
+          await session.endSession(true);
+          console.log('📺 Cast session ended');
+        }
+        setCastConnected(false);
+        setCastDevice(null);
+        setCastRetryCount(0);
       } else {
-        context.requestSession().then(() => {
-          if (isPlaying && currentTrackIndex >= 0) {
-            startCasting(queue[currentTrackIndex]);
+        console.log('📺 Requesting cast session...');
+        
+        try {
+          const session = await context.requestSession();
+          console.log('📺 Cast session established');
+          
+          // Wait a moment for session to stabilize
+          setTimeout(async () => {
+            if (isPlaying && currentTrackIndex >= 0 && queue[currentTrackIndex]) {
+              console.log('📺 Auto-starting cast for current track...');
+              await startCasting(queue[currentTrackIndex]);
+            }
+          }, 1500);
+          
+        } catch (sessionError) {
+          console.error('📺 Failed to establish cast session:', sessionError);
+          
+          // Handle specific session errors
+          if (sessionError.code === window.chrome.cast.ErrorCode.CANCEL) {
+            console.log('📺 Cast session cancelled by user');
+          } else if (sessionError.code === window.chrome.cast.ErrorCode.TIMEOUT) {
+            console.error('📺 Cast session timeout - no devices found');
+            setError({
+              code: 'CAST_TIMEOUT',
+              message: 'No Chromecast devices found. Make sure your devices are on the same network.'
+            });
+          } else if (sessionError.code === window.chrome.cast.ErrorCode.RECEIVER_UNAVAILABLE) {
+            console.error('📺 Cast receiver unavailable');
+            setError({
+              code: 'CAST_UNAVAILABLE', 
+              message: 'Chromecast device is unavailable. Try restarting the device.'
+            });
+          } else {
+            setError({
+              code: 'CAST_ERROR',
+              message: 'Failed to connect to Chromecast device'
+            });
           }
-        }).catch(console.error);
+        }
       }
     } catch (error) {
-      console.error('Cast toggle error:', error);
+      console.error('📺 Cast toggle error:', error);
+      setError({
+        code: 'CAST_ERROR',
+        message: 'Chromecast connection error'
+      });
     }
   };
 
@@ -590,6 +892,307 @@ const [latencySettings, setLatencySettings] = useState({
     }
   };
 
+  // Latency control functions
+  const fetchLatencySettings = async () => {
+    try {
+      const response = await fetch(`${serverAddress}/api/latency`);
+      if (response.ok) {
+        const data = await response.json();
+        setLatencyDelays(data.delays);
+        setActiveZones(data.activeZones);
+      }
+    } catch (error) {
+      console.error('Failed to fetch latency settings:', error);
+    }
+  };
+
+  const updateLatencyDelay = async (zone, delay) => {
+    try {
+      console.log(`🎛️ Updating ${zone} delay to ${delay}ms`);
+      
+      const response = await fetch(`${serverAddress}/api/latency/delays`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ [zone]: delay }),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Latency update successful:', result);
+        setLatencyDelays(prev => ({ ...prev, [zone]: delay }));
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('❌ Latency update failed:', response.status, errorData);
+        setError({ 
+          code: 'LATENCY_UPDATE_ERROR', 
+          message: `Failed to update latency: ${errorData.error || 'Server error'}` 
+        });
+      }
+    } catch (error) {
+      console.error('❌ Failed to update latency delay:', error);
+      setError({ 
+        code: 'LATENCY_UPDATE_ERROR', 
+        message: 'Network error: Failed to update latency settings' 
+      });
+    }
+  };
+
+  const toggleZone = async (zone) => {
+    const newActiveState = !activeZones[zone];
+    try {
+      console.log(`🔧 Toggling ${zone} zone to ${newActiveState}`);
+      
+      const response = await fetch(`${serverAddress}/api/latency/zones`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ [zone]: newActiveState }),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Zone toggle successful:', result);
+        setActiveZones(prev => ({ ...prev, [zone]: newActiveState }));
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('❌ Zone toggle failed:', response.status, errorData);
+        setError({ 
+          code: 'ZONE_UPDATE_ERROR', 
+          message: `Failed to toggle zone: ${errorData.error || 'Server error'}` 
+        });
+      }
+    } catch (error) {
+      console.error('❌ Failed to toggle zone:', error);
+      setError({ 
+        code: 'ZONE_UPDATE_ERROR', 
+        message: 'Network error: Failed to toggle zone' 
+      });
+    }
+  };
+
+  // Sync monitoring functions
+  const fetchSyncStatus = async () => {
+    try {
+      const response = await fetch(`${serverAddress}/api/sync/status`);
+      if (response.ok) {
+        const data = await response.json();
+        setSyncStatus(data);
+        console.log('📊 Sync status updated:', data);
+      } else {
+        console.error('Failed to fetch sync status:', response.status);
+      }
+    } catch (error) {
+      console.error('Failed to fetch sync status:', error);
+    }
+  };
+
+  const calibrateSync = async () => {
+    try {
+      console.log('🔄 Triggering manual sync calibration...');
+      const response = await fetch(`${serverAddress}/api/sync/calibrate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Sync calibration completed:', result);
+        // Refresh sync status after calibration
+        setTimeout(fetchSyncStatus, 1000);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('❌ Sync calibration failed:', response.status, errorData);
+        setError({ 
+          code: 'SYNC_CALIBRATION_ERROR', 
+          message: `Failed to calibrate sync: ${errorData.error || 'Server error'}` 
+        });
+      }
+    } catch (error) {
+      console.error('❌ Failed to calibrate sync:', error);
+      setError({ 
+        code: 'SYNC_CALIBRATION_ERROR', 
+        message: 'Network error: Failed to calibrate sync' 
+      });
+    }
+  };
+
+  // Snapcast control functions
+  const fetchSnapcastStatus = async () => {
+    try {
+      const response = await fetch(`${serverAddress}/api/snapcast/status`);
+      if (response.ok) {
+        const data = await response.json();
+        setSnapcastConnected(data.connected);
+        setSnapcastStatus(data.status);
+        setSnapcastClients(data.clients);
+        setSnapcastGroups(data.groups);
+      }
+    } catch (error) {
+      console.error('Failed to fetch Snapcast status:', error);
+    }
+  };
+
+  const setClientVolume = async (clientId, volume, muted = null) => {
+    try {
+      const response = await fetch(`${serverAddress}/api/snapcast/client/volume`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ clientId, volume, muted }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to set client volume');
+      }
+    } catch (error) {
+      console.error('Failed to set client volume:', error);
+      setError({ code: 'SNAPCAST_ERROR', message: 'Failed to control client volume' });
+    }
+  };
+
+  const setClientName = async (clientId, name) => {
+    try {
+      const response = await fetch(`${serverAddress}/api/snapcast/client/name`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ clientId, name }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to set client name');
+      }
+    } catch (error) {
+      console.error('Failed to set client name:', error);
+      setError({ code: 'SNAPCAST_ERROR', message: 'Failed to update client name' });
+    }
+  };
+
+  const setGroupMute = async (groupId, muted) => {
+    try {
+      const response = await fetch(`${serverAddress}/api/snapcast/group/mute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ groupId, muted }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to set group mute');
+      }
+    } catch (error) {
+      console.error('Failed to set group mute:', error);
+      setError({ code: 'SNAPCAST_ERROR', message: 'Failed to control group mute' });
+    }
+  };
+
+  const moveClientToGroup = async (clientId, groupId) => {
+    try {
+      const response = await fetch(`${serverAddress}/api/snapcast/client/move`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ clientId, groupId }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to move client');
+      }
+    } catch (error) {
+      console.error('Failed to move client:', error);
+      setError({ code: 'SNAPCAST_ERROR', message: 'Failed to move client to group' });
+    }
+  };
+
+  const refreshSnapcastStatus = async () => {
+    try {
+      const response = await fetch(`${serverAddress}/api/snapcast/refresh`, {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to refresh status');
+      }
+    } catch (error) {
+      console.error('Failed to refresh Snapcast status:', error);
+      setError({ code: 'SNAPCAST_ERROR', message: 'Failed to refresh Snapcast status' });
+    }
+  };
+
+  // Apple Music search functions
+  const searchAppleMusic = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const response = await fetch(`${serverAddress}/api/apple-music/search?q=${encodeURIComponent(query)}&limit=20`);
+      
+      if (!response.ok) {
+        throw new Error('Search failed');
+      }
+      
+      const data = await response.json();
+      setSearchResults(data.tracks || []);
+      console.log(`🍎 Found ${data.tracks?.length || 0} Apple Music tracks`);
+    } catch (error) {
+      console.error('Apple Music search error:', error);
+      setError({ code: 'SEARCH_ERROR', message: 'Apple Music search failed' });
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const addAppleMusicTrack = async (track) => {
+    try {
+      const response = await fetch(`${serverAddress}/api/apple-music/add-to-queue`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ track }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add track');
+      }
+
+      console.log(`🍎 Added Apple Music track to queue: ${track.name}`);
+      
+      // Clear search after adding
+      setSearchQuery('');
+      setSearchResults([]);
+    } catch (error) {
+      console.error('Error adding Apple Music track:', error);
+      setError({ code: 'APPLE_MUSIC_ERROR', message: 'Failed to add track to queue' });
+    }
+  };
+
+  // Handle search input
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    searchAppleMusic(searchQuery);
+  };
+
+  const formatDuration = (seconds) => {
+    if (!seconds) return '';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
   // File upload function
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -620,57 +1223,6 @@ const [latencySettings, setLatencySettings] = useState({
     }
 
     event.target.value = '';
-
-  // Latency control functions
-  const fetchLatencySettings = async () => {
-    try {
-      const response = await fetch(`${serverAddress}/api/latency`);
-      const data = await response.json();
-      setLatencySettings(data);
-    } catch (error) {
-      console.error('Failed to fetch latency settings:', error);
-    }
-  };
-
-  const updateDelay = async (zone, delay) => {
-    try {
-      const response = await fetch(`${serverAddress}/api/latency/delays`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [zone]: delay })
-      });
-      setLatencySettings(prev => ({
-        ...prev,
-        delays: { ...prev.delays, [zone]: delay }
-      }));
-    } catch (error) {
-      console.error('Failed to update delay:', error);
-    }
-  };
-
-  const updateActiveZone = async (zone, active) => {
-    try {
-      const response = await fetch(`${serverAddress}/api/latency/zones`, {
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [zone]: active })
-      });
-      setLatencySettings(prev => ({
-        ...prev,
-        activeZones: { ...prev.activeZones, [zone]: active }
-      }));
-    } catch (error) {
-      console.error('Failed to update zone:', error);
-    }
-  };
-
-  const testSync = async () => {
-    try {
-      await fetch(`${serverAddress}/api/latency/test`, { method: 'POST' });
-    } catch (error) {
-      console.error('Failed to test sync:', error);
-    }
-  };
   };
 
   const getStatusText = () => {
@@ -694,64 +1246,6 @@ const [latencySettings, setLatencySettings] = useState({
             />
           </div>
 
-
-          {/* Latency Control Panel */}
-          <div className="mb-8 bg-gray-800 rounded-lg p-6">
-            <h2 className="text-xl font-bold mb-4">🎚️ Audio Sync Controls</h2>
-            
-            {/* Zone Selection */}
-            <div className="mb-6">
-              <h3 className="text-lg font-medium mb-3">Active Zones</h3>
-              <div className="flex gap-6">
-                {Object.entries(latencySettings.activeZones).map(([zone, active]) => (
-                  <label key={zone} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={active}
-                      onChange={(e) => updateActiveZone(zone, e.target.checked)}
-                      className="w-4 h-4"
-                      disabled={connectionStatus !== 'connected'}
-                    />
-                    <span className="capitalize">{zone}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Delay Sliders */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium mb-3">Delay Compensation</h3>
-              {Object.entries(latencySettings.delays).map(([zone, delay]) => (
-                <div key={zone} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="capitalize font-medium">{zone}</span>
-                    <span className="text-sm text-gray-400">{delay}ms</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={zone === 'bluetooth' ? 100 : 0}
-                    max={zone === 'snapcast' ? 100 : zone === 'chromecast' ? 200 : 500}
-                    step="10"
-                    value={delay}
-                    onChange={(e) => updateDelay(zone, parseInt(e.target.value))}
-                    disabled={connectionStatus !== 'connected'}
-                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
-              ))}
-            </div>
-
-            {/* Test Sync Button */}
-            <div className="mt-6">
-              <button
-                onClick={testSync}
-                disabled={connectionStatus !== 'connected'}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 px-4 py-2 rounded"
-              >
-                🔊 Test Sync
-              </button>
-            </div>
-          </div>
           {/* Error Display */}
           {error && (
             <div className="mb-6 bg-red-500/10 border border-red-500/20 rounded-lg p-4">
@@ -786,6 +1280,111 @@ const [latencySettings, setLatencySettings] = useState({
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Apple Music Search Section */}
+          <div className="mb-8 bg-gray-800 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Music className="w-5 h-5" />
+                Apple Music Search
+              </h2>
+              <button
+                onClick={() => setShowSearch(!showSearch)}
+                className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm flex items-center gap-1"
+              >
+                <Search className="w-4 h-4" />
+                {showSearch ? 'Hide' : 'Show'} Search
+              </button>
+            </div>
+            
+            {showSearch && (
+              <div>
+                <form onSubmit={handleSearchSubmit} className="mb-4">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Search for songs, artists, albums..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="flex-1 bg-gray-700 text-white px-4 py-2 rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+                      disabled={connectionStatus !== 'connected' || searching}
+                    />
+                    <button
+                      type="submit"
+                      disabled={connectionStatus !== 'connected' || searching || !searchQuery.trim()}
+                      className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed px-6 py-2 rounded flex items-center gap-2"
+                    >
+                      <Search className="w-4 h-4" />
+                      {searching ? 'Searching...' : 'Search'}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Search Results */}
+                {searchResults.length > 0 && (
+                  <div className="max-h-96 overflow-y-auto space-y-2">
+                    <div className="text-sm text-gray-400 mb-2">
+                      Found {searchResults.length} results (30-second previews)
+                    </div>
+                    {searchResults.map((track, index) => (
+                      <div
+                        key={track.id}
+                        className="flex items-center justify-between bg-gray-700 p-3 rounded hover:bg-gray-600"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          {track.artwork && (
+                            <img
+                              src={track.artwork}
+                              alt={`${track.name} artwork`}
+                              className="w-12 h-12 rounded object-cover"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">{track.name}</div>
+                            <div className="text-sm text-gray-400 truncate">
+                              {track.artist} • {track.album}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {track.duration ? formatDuration(track.duration) : ''} 
+                              {track.explicit && <span className="ml-2 text-red-400">Explicit</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {track.previewUrl && (
+                            <button
+                              onClick={() => addAppleMusicTrack(track)}
+                              disabled={connectionStatus !== 'connected'}
+                              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed px-3 py-1 rounded text-sm"
+                              title="Add 30-second preview to queue"
+                            >
+                              Add Preview
+                            </button>
+                          )}
+                          {!track.previewUrl && (
+                            <span className="text-xs text-gray-500">No Preview</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {searching && (
+                  <div className="text-center text-gray-400 py-4">
+                    <Search className="w-8 h-8 mx-auto mb-2 animate-pulse" />
+                    Searching Apple Music...
+                  </div>
+                )}
+
+                {searchQuery && !searching && searchResults.length === 0 && (
+                  <div className="text-center text-gray-400 py-8">
+                    No results found for "{searchQuery}"
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Music Library */}
@@ -860,8 +1459,387 @@ const [latencySettings, setLatencySettings] = useState({
             </div>
             <div className="text-sm text-gray-400">
               {getStatusText()}
-              {castConnected && <span className="text-green-400 ml-2">• Casting to TV</span>}
+              {castConnected && castDevice && (
+                <span className="text-green-400 ml-2">• Casting to {castDevice.name}</span>
+              )}
+              {castRetryCount > 0 && (
+                <span className="text-yellow-400 ml-2">• Retrying cast ({castRetryCount}/3)</span>
+              )}
             </div>
+          </div>
+
+          {/* Latency Controls */}
+          <div className="mb-8 bg-gray-800 rounded-lg p-6">
+            <h2 className="text-xl font-bold mb-4">Audio Synchronization</h2>
+            <div className="grid gap-6 md:grid-cols-3">
+              {/* Snapcast Delay */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Snapcast</label>
+                  <input
+                    type="checkbox"
+                    checked={activeZones.snapcast}
+                    onChange={() => toggleZone('snapcast')}
+                    className="rounded"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={latencyDelays.snapcast}
+                    onChange={(e) => updateLatencyDelay('snapcast', parseInt(e.target.value))}
+                    disabled={connectionStatus !== 'connected'}
+                    className="flex-1"
+                  />
+                  <span className="text-sm text-gray-400 w-12">{latencyDelays.snapcast}ms</span>
+                </div>
+              </div>
+
+              {/* Chromecast Delay */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Chromecast</label>
+                  <input
+                    type="checkbox"
+                    checked={activeZones.chromecast}
+                    onChange={() => toggleZone('chromecast')}
+                    className="rounded"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="0"
+                    max="200"
+                    value={latencyDelays.chromecast}
+                    onChange={(e) => updateLatencyDelay('chromecast', parseInt(e.target.value))}
+                    disabled={connectionStatus !== 'connected'}
+                    className="flex-1"
+                  />
+                  <span className="text-sm text-gray-400 w-12">{latencyDelays.chromecast}ms</span>
+                </div>
+              </div>
+
+              {/* Bluetooth Delay */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Bluetooth</label>
+                  <input
+                    type="checkbox"
+                    checked={activeZones.bluetooth}
+                    onChange={() => toggleZone('bluetooth')}
+                    className="rounded"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="100"
+                    max="500"
+                    value={latencyDelays.bluetooth}
+                    onChange={(e) => updateLatencyDelay('bluetooth', parseInt(e.target.value))}
+                    disabled={connectionStatus !== 'connected'}
+                    className="flex-1"
+                  />
+                  <span className="text-sm text-gray-400 w-12">{latencyDelays.bluetooth}ms</span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 text-xs text-gray-500">
+              Adjust delays to synchronize audio playback across different zones and devices
+            </div>
+          </div>
+
+          {/* Sync Quality Monitoring */}
+          <div className="mb-8 bg-gray-800 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                Sync Quality Monitoring
+              </h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowSyncMonitoring(!showSyncMonitoring)}
+                  className="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-sm flex items-center gap-1"
+                >
+                  {showSyncMonitoring ? 'Hide' : 'Show'} Details
+                </button>
+                <button
+                  onClick={calibrateSync}
+                  disabled={connectionStatus !== 'connected'}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed px-3 py-1 rounded text-sm flex items-center gap-1"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Calibrate
+                </button>
+              </div>
+            </div>
+
+            {/* Sync Quality Overview */}
+            {syncStatus && (
+              <div className="grid gap-4 md:grid-cols-3 mb-4">
+                {Object.entries(syncStatus.syncQuality || {}).map(([zone, quality]) => {
+                  const isActive = syncStatus.activeZones?.[zone];
+                  return (
+                    <div key={zone} className={`p-4 rounded-lg border ${
+                      isActive 
+                        ? 'bg-green-500/10 border-green-500/20' 
+                        : 'bg-gray-700/50 border-gray-600/50'
+                    }`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-medium capitalize">{zone}</h3>
+                        <div className={`px-2 py-1 rounded text-xs ${
+                          isActive ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'
+                        }`}>
+                          {isActive ? 'Active' : 'Inactive'}
+                        </div>
+                      </div>
+                      
+                      {isActive && (
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span>Accuracy:</span>
+                            <span className={`font-medium ${
+                              quality.accuracy >= 80 ? 'text-green-400' :
+                              quality.accuracy >= 60 ? 'text-yellow-400' : 'text-red-400'
+                            }`}>
+                              {quality.accuracy}%
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Jitter:</span>
+                            <span className={`font-medium ${
+                              quality.jitter <= 10 ? 'text-green-400' :
+                              quality.jitter <= 30 ? 'text-yellow-400' : 'text-red-400'
+                            }`}>
+                              {quality.jitter}ms
+                            </span>
+                          </div>
+                          {syncStatus.detectedLatencies?.[zone] && (
+                            <div className="flex justify-between">
+                              <span>Latency:</span>
+                              <span className="text-gray-300">
+                                {Math.round(syncStatus.detectedLatencies[zone].average)}ms
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Detailed Sync Information */}
+            {showSyncMonitoring && syncStatus && (
+              <div className="space-y-4 border-t border-gray-700 pt-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <h4 className="font-medium mb-2">Network Conditions</h4>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span>Stability:</span>
+                        <span className={`capitalize font-medium ${
+                          syncStatus.networkConditions?.stability === 'excellent' ? 'text-green-400' :
+                          syncStatus.networkConditions?.stability === 'good' ? 'text-blue-400' :
+                          syncStatus.networkConditions?.stability === 'fair' ? 'text-yellow-400' : 'text-red-400'
+                        }`}>
+                          {syncStatus.networkConditions?.stability || 'Unknown'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Avg RTT:</span>
+                        <span>{syncStatus.networkConditions?.avgRtt || 0}ms</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Packet Loss:</span>
+                        <span>{syncStatus.networkConditions?.packetLoss || 0}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium mb-2">Connected Devices</h4>
+                    <div className="space-y-1 text-sm">
+                      {syncStatus.connectedDevices?.length > 0 ? (
+                        syncStatus.connectedDevices.map((device, index) => (
+                          <div key={index} className="text-gray-300">• {device}</div>
+                        ))
+                      ) : (
+                        <div className="text-gray-500">No devices connected</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Sync Events */}
+                {syncStatus.syncEvents?.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-2">Recent Events</h4>
+                    <div className="space-y-1 text-sm max-h-32 overflow-y-auto">
+                      {syncStatus.syncEvents.slice(-5).reverse().map((event, index) => (
+                        <div key={index} className="flex justify-between text-gray-300">
+                          <span>{event.type.replace('_', ' ')}</span>
+                          <span>{new Date(event.timestamp).toLocaleTimeString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="mt-4 text-xs text-gray-500">
+              Real-time monitoring of multi-room audio synchronization quality and network conditions
+            </div>
+          </div>
+
+          {/* Snapcast Client Management */}
+          <div className="mb-8 bg-gray-800 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Snapcast Clients ({snapcastClients.length})
+              </h2>
+              <div className="flex items-center gap-2">
+                <div className={`flex items-center gap-2 px-3 py-1 rounded text-sm ${
+                  snapcastConnected 
+                    ? 'bg-green-500/10 border border-green-500/20 text-green-400' 
+                    : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                }`}>
+                  {snapcastConnected ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
+                  {snapcastConnected ? 'Connected' : 'Disconnected'}
+                </div>
+                <button
+                  onClick={refreshSnapcastStatus}
+                  disabled={connectionStatus !== 'connected'}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed px-3 py-1 rounded text-sm flex items-center gap-1"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh
+                </button>
+              </div>
+            </div>
+
+            {!snapcastConnected ? (
+              <div className="text-center text-gray-400 py-8">
+                <WifiOff className="w-12 h-12 mx-auto mb-4 text-gray-600" />
+                <p>Not connected to Snapcast server</p>
+                <p className="text-sm text-gray-500 mt-1">Make sure Snapcast server is running on localhost:1705</p>
+              </div>
+            ) : snapcastClients.length === 0 ? (
+              <div className="text-center text-gray-400 py-8">
+                <Users className="w-12 h-12 mx-auto mb-4 text-gray-600" />
+                <p>No Snapcast clients found</p>
+                <p className="text-sm text-gray-500 mt-1">Start Snapcast clients to see them here</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Groups */}
+                {snapcastGroups.map((group) => (
+                  <div key={group.id} className="border border-gray-700 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        Group: {group.name || `Group ${group.id}`}
+                      </h3>
+                      <button
+                        onClick={() => setGroupMute(group.id, !group.muted)}
+                        disabled={connectionStatus !== 'connected'}
+                        className={`p-2 rounded transition-colors ${
+                          group.muted 
+                            ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' 
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        title={group.muted ? 'Unmute Group' : 'Mute Group'}
+                      >
+                        {group.muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                      </button>
+                    </div>
+
+                    {/* Clients in this group */}
+                    <div className="space-y-2">
+                      {snapcastClients.filter(client => client.groupId === group.id).map((client) => (
+                        <div key={client.id} className="bg-gray-700 rounded p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-3 h-3 rounded-full ${
+                                client.connected ? 'bg-green-500' : 'bg-red-500'
+                              }`} />
+                              <div>
+                                <div className="font-medium">{client.host.name || client.host.ip}</div>
+                                <div className="text-sm text-gray-400">
+                                  {client.host.ip} • {client.config.name || 'Unnamed'}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  const newName = prompt('Enter new name:', client.config.name || '');
+                                  if (newName !== null && newName !== client.config.name) {
+                                    setClientName(client.id, newName);
+                                  }
+                                }}
+                                disabled={connectionStatus !== 'connected' || !client.connected}
+                                className="p-1 text-gray-400 hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Edit Name"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                              <select
+                                value={client.groupId}
+                                onChange={(e) => moveClientToGroup(client.id, e.target.value)}
+                                disabled={connectionStatus !== 'connected' || !client.connected}
+                                className="bg-gray-600 text-white text-sm rounded px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Move to Group"
+                              >
+                                {snapcastGroups.map((g) => (
+                                  <option key={g.id} value={g.id}>
+                                    {g.name || `Group ${g.id}`}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Volume Control */}
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => setClientVolume(client.id, client.config.volume.percent, !client.config.volume.muted)}
+                              disabled={connectionStatus !== 'connected' || !client.connected}
+                              className={`p-1 rounded transition-colors ${
+                                client.config.volume.muted 
+                                  ? 'bg-red-500/20 text-red-400' 
+                                  : 'text-gray-300 hover:text-gray-100'
+                              } disabled:opacity-50 disabled:cursor-not-allowed`}
+                              title={client.config.volume.muted ? 'Unmute' : 'Mute'}
+                            >
+                              {client.config.volume.muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                            </button>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={client.config.volume.percent}
+                              onChange={(e) => setClientVolume(client.id, parseInt(e.target.value))}
+                              disabled={connectionStatus !== 'connected' || !client.connected || client.config.volume.muted}
+                              className="flex-1 disabled:opacity-50"
+                            />
+                            <span className="text-sm text-gray-400 w-12">
+                              {client.config.volume.muted ? 'Muted' : `${client.config.volume.percent}%`}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Queue */}

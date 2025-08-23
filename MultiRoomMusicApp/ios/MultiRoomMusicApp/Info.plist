@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AVAudioSessionCategory</key>
+	<string>AVAudioSessionCategoryPlayback</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>Multi-Room Music</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Audio File</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.audio</string>
+				<string>com.iniviv.multiroommusicapp.audio</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.iniviv.multiroommusicapp</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>multiroommusicapp</string>
+				<string>multiroommusic</string>
+				<string>iniviv</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>Spotify OAuth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>multiroommusicapp</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>Apple Music</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>music</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>SoundCloud OAuth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>soundcloud</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>itms-apps</string>
+		<string>https</string>
+		<string>spotify</string>
+		<string>music</string>
+		<string>soundcloud</string>
+		<string>http</string>
+	</array>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>0.0.0.0</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+			<key>127.0.0.1</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+			<key>192.168.12.125</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.0</string>
+			</dict>
+			<key>localhost</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>This app integrates with Apple Music to access your music library and stream content to your multi-room audio system.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>This app uses Bluetooth to connect to wireless audio devices for multi-room music playback.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>This app uses Bluetooth to detect and connect to audio devices.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app may use the camera to scan QR codes for quick server connection setup.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>This app may access contacts to share music with friends on your network.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>This app uses local network access to connect to your music server and Snapcast devices on your home network.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app uses location to automatically detect your home network and connect to your music server.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs microphone access for audio processing and latency compensation.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app may access your photo library to select album artwork for your music files.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>This app uses tracking to provide personalized music recommendations and improve your listening experience.</string>
+	<key>RCTNewArchEnabled</key>
+	<false/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>background-processing</string>
+		<string>background-fetch</string>
+		<string>remote-notification</string>
+		<string>voip</string>
+	</array>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportsDocumentBrowser</key>
+	<true/>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.audio</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Audio File</string>
+			<key>UTTypeIconFiles</key>
+			<array/>
+			<key>UTTypeIdentifier</key>
+			<string>com.iniviv.multiroommusicapp.audio</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>mp3</string>
+					<string>m4a</string>
+					<string>wav</string>
+					<string>flac</string>
+					<string>aac</string>
+					<string>ogg</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>audio/mpeg</string>
+					<string>audio/mp4</string>
+					<string>audio/wav</string>
+					<string>audio/flac</string>
+					<string>audio/aac</string>
+					<string>audio/ogg</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+</dict>
+</plist>

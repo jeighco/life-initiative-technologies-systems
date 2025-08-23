@@ -1,0 +1,35 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "YOUR_TEAM_ID.com.iniviv.multiroommusicapp"
+        ],
+        "components": [
+          {
+            "/": "/app/*",
+            "comment": "Matches any URL with a path that starts with /app/"
+          },
+          {
+            "/": "/download",
+            "comment": "Matches the download page"
+          },
+          {
+            "/": "/music/*",
+            "comment": "Matches any music-related deep links"
+          }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "YOUR_TEAM_ID.com.iniviv.multiroommusicapp"
+    ]
+  },
+  "appclips": {
+    "apps": [
+      "YOUR_TEAM_ID.com.iniviv.multiroommusicapp.Clip"
+    ]
+  }
+}

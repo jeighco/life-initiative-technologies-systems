@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Room Music - iniviv.com</title>
+    <meta name="description" content="Download Multi-Room Music app for iOS. Synchronized audio streaming across your home with intelligent device detection and automatic audio zone management.">
+    <meta name="keywords" content="multi-room music, audio streaming, snapcast, iOS app, synchronized audio, bluetooth, airplay">
+    
+    <!-- iOS Web App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Multi-Room Music">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Multi-Room Music - Synchronized Audio Streaming">
+    <meta property="og:description" content="Transform your home into a synchronized audio experience with intelligent device detection and seamless multi-room streaming.">
+    <meta property="og:url" content="https://iniviv.com">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://iniviv.com/assets/app-preview.jpg">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Multi-Room Music - iniviv.com">
+    <meta name="twitter:description" content="Synchronized audio streaming across your home">
+    <meta name="twitter:image" content="https://iniviv.com/assets/app-preview.jpg">
+    
+    <!-- App Store Smart Banner -->
+    <meta name="apple-itunes-app" content="app-id=YOUR_APP_STORE_ID, app-argument=https://iniviv.com/app">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        /* Header */
+        .header {
+            padding: 20px 0;
+            position: relative;
+            z-index: 100;
+        }
+        
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4ade80;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            list-style: none;
+        }
+        
+        .nav-links a {
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .nav-links a:hover {
+            color: #4ade80;
+        }
+        
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 80px 0 120px;
+            position: relative;
+        }
+        
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #4ade80, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero p {
+            font-size: 1.25rem;
+            color: #d1d5db;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+        
+        .download-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 60px;
+        }
+        
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: #000000;
+            color: #ffffff;
+            padding: 15px 25px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 2px solid #333;
+        }
+        
+        .download-btn:hover {
+            background: #333;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        
+        .download-btn.primary {
+            background: linear-gradient(135deg, #4ade80, #06b6d4);
+            border: none;
+            color: #000;
+            font-weight: 700;
+        }
+        
+        .download-btn.primary:hover {
+            background: linear-gradient(135deg, #22c55e, #0891b2);
+        }
+        
+        .app-icon {
+            width: 24px;
+            height: 24px;
+        }
+        
+        /* Features Section */
+        .features {
+            padding: 80px 0;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        .features h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 60px;
+            color: #4ade80;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+        
+        .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #06b6d4;
+        }
+        
+        .feature-card p {
+            color: #d1d5db;
+            line-height: 1.6;
+        }
+        
+        /* Device Detection */
+        .device-info {
+            padding: 60px 0;
+            text-align: center;
+        }
+        
+        .device-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px auto;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Footer */
+        .footer {
+            padding: 40px 0;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 80px;
+        }
+        
+        .footer p {
+            color: #9ca3af;
+        }
+        
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero p {
+                font-size: 1rem;
+            }
+            
+            .download-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .download-btn {
+                width: 100%;
+                max-width: 300px;
+                justify-content: center;
+            }
+        }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in-up {
+            animation: fadeInUp 0.8s ease-out;
+        }
+        
+        /* Smart App Banner Override */
+        .smart-banner {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <nav class="nav container">
+            <div class="logo">iniviv</div>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#download">Download</a></li>
+                <li><a href="#support">Support</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <div class="hero-content fade-in-up">
+                    <h1>Multi-Room Music</h1>
+                    <p>Transform your home into a synchronized audio experience with intelligent device detection and seamless multi-room streaming.</p>
+                    
+                    <div class="download-buttons" id="download">
+                        <a href="#" class="download-btn primary" id="ios-download">
+                            <svg class="app-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                            </svg>
+                            Download for iOS
+                        </a>
+                        <a href="#" class="download-btn" id="testflight-download" style="display: none;">
+                            <svg class="app-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                            Join TestFlight Beta
+                        </a>
+                    </div>
+                    
+                    <div class="device-info">
+                        <div class="device-card" id="device-info">
+                            <h3>🔍 Detecting your device...</h3>
+                            <p id="device-details">Please wait while we analyze your device compatibility.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="features" id="features">
+            <div class="container">
+                <h2>Powerful Features</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">🏠</div>
+                        <h3>Multi-Room Sync</h3>
+                        <p>Perfectly synchronized audio across all rooms with ultra-low latency Snapcast integration and intelligent zone management.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📱</div>
+                        <h3>Smart Device Detection</h3>
+                        <p>Automatically detects your iPhone/iPad capabilities and recommends optimal audio zones based on your connection type.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🎵</div>
+                        <h3>Background Playback</h3>
+                        <p>Continues playing when backgrounded with full iOS lock screen and Control Center integration.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔊</div>
+                        <h3>Audio Zone Management</h3>
+                        <p>Seamlessly switch between Snapcast, Bluetooth, and AirPlay devices with automatic latency compensation.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📡</div>
+                        <h3>Network Intelligence</h3>
+                        <p>Auto-discovers music servers on your local network and maintains stable connections across different network types.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">⚡</div>
+                        <h3>Real-time Control</h3>
+                        <p>Instant response for play, pause, skip, and queue management with real-time synchronization across all devices.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 iniviv.com - Multi-Room Music. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Device detection and smart download logic
+        function detectDevice() {
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            const deviceInfo = document.getElementById('device-info');
+            const deviceDetails = document.getElementById('device-details');
+            const iosDownload = document.getElementById('ios-download');
+            const testflightDownload = document.getElementById('testflight-download');
+            
+            // Check if iOS
+            if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+                const isInAppBrowser = /FBAN|FBAV|Instagram|Twitter|Line|WhatsApp/.test(userAgent);
+                const version = userAgent.match(/OS (\d+)_(\d+)_?(\d+)?/);
+                const majorVersion = version ? parseInt(version[1], 10) : 0;
+                
+                if (majorVersion >= 13) {
+                    deviceInfo.innerHTML = '<h3>✅ Compatible iOS Device Detected</h3>';
+                    deviceDetails.innerHTML = `Your device is compatible with Multi-Room Music! iOS ${majorVersion}+ detected.`;
+                    
+                    if (isInAppBrowser) {
+                        iosDownload.href = 'https://apps.apple.com/app/multi-room-music/YOUR_APP_ID';
+                        iosDownload.innerHTML = '<svg class="app-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>Open in App Store';
+                    } else {
+                        // Try to open the app first, fallback to App Store
+                        iosDownload.onclick = function(e) {
+                            e.preventDefault();
+                            
+                            // Try to open the app with custom URL scheme
+                            const appURL = 'multiroommusic://open';
+                            const appStoreURL = 'https://apps.apple.com/app/multi-room-music/YOUR_APP_ID';
+                            
+                            const iframe = document.createElement('iframe');
+                            iframe.style.display = 'none';
+                            iframe.src = appURL;
+                            document.body.appendChild(iframe);
+                            
+                            // If app doesn't open in 2 seconds, redirect to App Store
+                            setTimeout(() => {
+                                document.body.removeChild(iframe);
+                                window.location.href = appStoreURL;
+                            }, 2000);
+                        };
+                    }
+                } else {
+                    deviceInfo.innerHTML = '<h3>⚠️ iOS Update Required</h3>';
+                    deviceDetails.innerHTML = `Your device needs iOS 13 or later. Currently running iOS ${majorVersion}.`;
+                    iosDownload.style.display = 'none';
+                }
+                
+                // Show TestFlight option for beta testing
+                testflightDownload.style.display = 'inline-flex';
+                testflightDownload.href = 'https://testflight.apple.com/join/YOUR_TESTFLIGHT_CODE';
+                
+            } else {
+                // Non-iOS device
+                deviceInfo.innerHTML = '<h3>📱 iOS Device Required</h3>';
+                deviceDetails.innerHTML = 'Multi-Room Music is currently available for iPhone and iPad only. Android version coming soon!';
+                iosDownload.style.display = 'none';
+                
+                // Show alternative options
+                const downloadButtons = document.querySelector('.download-buttons');
+                const webAppBtn = document.createElement('a');
+                webAppBtn.href = '#';
+                webAppBtn.className = 'download-btn';
+                webAppBtn.innerHTML = '<span>📧</span> Notify me when available';
+                webAppBtn.onclick = function(e) {
+                    e.preventDefault();
+                    alert('Thanks for your interest! We\'ll notify you when the Android version is available.');
+                };
+                downloadButtons.appendChild(webAppBtn);
+            }
+        }
+        
+        // Initialize device detection
+        detectDevice();
+        
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+        
+        // Add fade-in animation to feature cards
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in-up');
+                }
+            });
+        }, observerOptions);
+        
+        document.querySelectorAll('.feature-card').forEach(card => {
+            observer.observe(card);
+        });
+        
+        // Handle app installation prompts
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show custom install button for PWA
+            const installBtn = document.createElement('button');
+            installBtn.textContent = 'Install Web App';
+            installBtn.className = 'download-btn';
+            installBtn.onclick = async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(`User response: ${outcome}`);
+                    deferredPrompt = null;
+                }
+            };
+            
+            document.querySelector('.download-buttons').appendChild(installBtn);
+        });
+    </script>
+</body>
+</html>

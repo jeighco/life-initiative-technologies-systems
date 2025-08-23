@@ -11,7 +11,7 @@ const server = http.createServer(app);
 
 // Socket.IO with CORS configuration
 const io = socketIo(server, {
-app.use(cors());  cors: {
+  cors: {
     origin: '*',
     methods: ['GET', 'POST']
   }
@@ -32,753 +32,533 @@ app.use((req, res, next) => {
 // Configuration
 const PORT = 3000;
 const MUSIC_DIR = path.join(__dirname, 'music');
-const SNAPCAST_FIFO = '/tmp/snapfifo';
 const FFMPEG_PATH = '/opt/homebrew/bin/ffmpeg';
 
-// Latency compensation configuration
-const AUDIO_DELAYS = {
-  snapcast: 0,      // Reference timing (no delay)
-  chromecast: 50,   // Chromecast network delay
-  bluetooth: 250    // Bluetooth latency compensation
+// =============================================================================
+// PURE SOCKET.IO SYNCHRONIZATION SYSTEM
+// =============================================================================
+
+// Master playback timeline
+const playbackState = {
+  isPlaying: false,
+  currentTrack: null,
+  position: 0,           // Current position in milliseconds
+  startTime: 0,          // When playback started (server timestamp)
+  lastUpdate: Date.now() // Last state update timestamp
 };
 
-// Active zones configuration
-let activeZones = {
-  snapcast: true,
-  chromecast: false,
-  bluetooth: false
+// Device registry and sync management
+const devices = new Map(); // socketId -> deviceInfo
+const deviceTypes = {
+  CHROMECAST: 'chromecast',
+  BLUETOOTH: 'bluetooth', 
+  WEB: 'web',
+  MOBILE: 'mobile'
 };
-// Socket.IO with CORS configuration
 
-// CORS headers for HTTP requests
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  next();
-});
+// Device-specific latency compensation (in milliseconds)
+const DEVICE_LATENCIES = {
+  [deviceTypes.CHROMECAST]: 85,
+  [deviceTypes.BLUETOOTH]: 250,
+  [deviceTypes.WEB]: 20,
+  [deviceTypes.MOBILE]: 50
+};
 
-// Configuration
+// Sync coordinator for orchestrating multi-device playback
+class SyncCoordinator {
+  constructor() {
+    this.syncTolerance = 50; // Acceptable sync drift in ms
+    this.syncInterval = 1000; // Sync check interval
+    this.isActive = false;
+  }
 
-// State management
+  start() {
+    if (this.isActive) return;
+    this.isActive = true;
+    
+    this.syncTimer = setInterval(() => {
+      this.broadcastSyncUpdate();
+    }, this.syncInterval);
+    
+    console.log(`✅ Sync coordinator started (tolerance: ${this.syncTolerance}ms)`);
+  }
+
+  stop() {
+    if (!this.isActive) return;
+    this.isActive = false;
+    
+    if (this.syncTimer) {
+      clearInterval(this.syncTimer);
+      this.syncTimer = null;
+    }
+    
+    console.log('⏹️  Sync coordinator stopped');
+  }
+
+  getCurrentPosition() {
+    if (!playbackState.isPlaying) {
+      return playbackState.position;
+    }
+    
+    const elapsed = Date.now() - playbackState.startTime;
+    return playbackState.position + elapsed;
+  }
+
+  broadcastSyncUpdate() {
+    if (devices.size === 0) return;
+
+    const currentPosition = this.getCurrentPosition();
+    const timestamp = Date.now();
+    
+    // Send sync update to all connected devices
+    devices.forEach((device, socketId) => {
+      const socket = io.sockets.sockets.get(socketId);
+      if (socket) {
+        const compensatedPosition = currentPosition + (DEVICE_LATENCIES[device.type] || 0);
+        
+        socket.emit('sync_update', {
+          position: compensatedPosition,
+          isPlaying: playbackState.isPlaying,
+          timestamp: timestamp,
+          track: playbackState.currentTrack,
+          latencyCompensation: DEVICE_LATENCIES[device.type] || 0
+        });
+      }
+    });
+  }
+
+  handlePlay(position = null) {
+    const now = Date.now();
+    
+    if (position !== null) {
+      playbackState.position = position;
+    }
+    
+    playbackState.isPlaying = true;
+    playbackState.startTime = now;
+    playbackState.lastUpdate = now;
+    
+    // Broadcast coordinated play command
+    this.broadcastPlayCommand();
+  }
+
+  handlePause() {
+    const now = Date.now();
+    
+    if (playbackState.isPlaying) {
+      playbackState.position = this.getCurrentPosition();
+    }
+    
+    playbackState.isPlaying = false;
+    playbackState.lastUpdate = now;
+    
+    // Broadcast coordinated pause command
+    this.broadcastPauseCommand();
+  }
+
+  handleSeek(position) {
+    const now = Date.now();
+    
+    playbackState.position = position;
+    playbackState.startTime = now;
+    playbackState.lastUpdate = now;
+    
+    // Broadcast coordinated seek command
+    this.broadcastSeekCommand(position);
+  }
+
+  broadcastPlayCommand() {
+    const timestamp = Date.now();
+    const delayMs = 100; // Small delay to ensure all devices start together
+    
+    devices.forEach((device, socketId) => {
+      const socket = io.sockets.sockets.get(socketId);
+      if (socket) {
+        const compensatedDelay = delayMs + (DEVICE_LATENCIES[device.type] || 0);
+        
+        socket.emit('sync_play', {
+          position: playbackState.position,
+          startTime: timestamp + delayMs,
+          delay: compensatedDelay,
+          track: playbackState.currentTrack
+        });
+      }
+    });
+  }
+
+  broadcastPauseCommand() {
+    const timestamp = Date.now();
+    
+    devices.forEach((device, socketId) => {
+      const socket = io.sockets.sockets.get(socketId);
+      if (socket) {
+        socket.emit('sync_pause', {
+          position: this.getCurrentPosition(),
+          timestamp: timestamp
+        });
+      }
+    });
+  }
+
+  broadcastSeekCommand(position) {
+    const timestamp = Date.now();
+    
+    devices.forEach((device, socketId) => {
+      const socket = io.sockets.sockets.get(socketId);
+      if (socket) {
+        socket.emit('sync_seek', {
+          position: position,
+          timestamp: timestamp,
+          track: playbackState.currentTrack
+        });
+      }
+    });
+  }
+}
+
+const syncCoordinator = new SyncCoordinator();
+
+// =============================================================================
+// MUSIC MANAGEMENT
+// =============================================================================
+
 let musicFiles = [];
 let queue = [];
 let currentTrackIndex = -1;
-let isPlaying = false;
-let audioStreamProcess = null;
 let httpAudioProcess = null;
-let silenceStreamProcess = null;
-let isTransitioning = false;
-let httpStreamClients = []; // Track HTTP streaming clients
 
-// Enhanced logging
-const logger = {
-  info: (message, ...args) => console.log(`[${new Date().toISOString()}] ℹ️  ${message}`, ...args),
-  success: (message, ...args) => console.log(`[${new Date().toISOString()}] ✅ ${message}`, ...args),
-  warn: (message, ...args) => console.log(`[${new Date().toISOString()}] ⚠️  ${message}`, ...args),
-  error: (message, ...args) => console.error(`[${new Date().toISOString()}] ❌ ${message}`, ...args)
-};
+// Initialize music library
+function initializeMusicLibrary() {
+  try {
+    if (!fs.existsSync(MUSIC_DIR)) {
+      fs.mkdirSync(MUSIC_DIR, { recursive: true });
+      console.log(`📁 Created music directory: ${MUSIC_DIR}`);
+    }
+    
+    const files = fs.readdirSync(MUSIC_DIR);
+    musicFiles = files
+      .filter(file => /\.(mp3|wav|flac|m4a)$/i.test(file))
+      .map(file => ({
+        name: file,
+        path: path.join(MUSIC_DIR, file),
+        title: file.replace(/\.(mp3|wav|flac|m4a)$/i, ''),
+        duration: 0 // Could be populated with metadata later
+      }));
+    
+    console.log(`✅ Found ${musicFiles.length} music files`);
+  } catch (error) {
+    console.error('❌ Error initializing music library:', error);
+  }
+}
 
-// Multer configuration for file uploads
+// Start HTTP audio stream
+function startHttpAudioStream(trackPath) {
+  stopHttpAudioStream();
+  
+  const ffmpegArgs = [
+    '-i', trackPath,
+    '-acodec', 'mp3',
+    '-ab', '192k',
+    '-ac', '2',
+    '-ar', '44100',
+    '-f', 'mp3',
+    'pipe:1'
+  ];
+  
+  httpAudioProcess = spawn(FFMPEG_PATH, ffmpegArgs);
+  
+  httpAudioProcess.on('error', (error) => {
+    console.error('❌ HTTP audio stream error:', error);
+  });
+  
+  httpAudioProcess.on('exit', (code) => {
+    console.log(`🎵 HTTP audio stream exited with code ${code}`);
+  });
+  
+  console.log(`🎵 Started HTTP audio stream for: ${path.basename(trackPath)}`);
+}
+
+function stopHttpAudioStream() {
+  if (httpAudioProcess) {
+    httpAudioProcess.kill('SIGTERM');
+    httpAudioProcess = null;
+    console.log('⏹️  Stopped HTTP audio stream');
+  }
+}
+
+// =============================================================================
+// SOCKET.IO EVENT HANDLERS
+// =============================================================================
+
+io.on('connection', (socket) => {
+  console.log(`🔌 Client connected: ${socket.id}`);
+  
+  // Device registration
+  socket.on('register_device', (deviceInfo) => {
+    const device = {
+      id: socket.id,
+      type: deviceInfo.type || deviceTypes.WEB,
+      name: deviceInfo.name || 'Unknown Device',
+      capabilities: deviceInfo.capabilities || [],
+      joinTime: Date.now()
+    };
+    
+    devices.set(socket.id, device);
+    console.log(`📱 Device registered: ${device.name} (${device.type})`);
+    
+    // Send current state to new device
+    socket.emit('playback_state', {
+      isPlaying: playbackState.isPlaying,
+      currentTrack: playbackState.currentTrack,
+      position: syncCoordinator.getCurrentPosition(),
+      queue: queue,
+      musicLibrary: musicFiles
+    });
+    
+    // Start sync coordinator if this is the first device
+    if (devices.size === 1) {
+      syncCoordinator.start();
+    }
+    
+    // Broadcast device list update
+    io.emit('devices_update', Array.from(devices.values()));
+  });
+  
+  // Playback controls
+  socket.on('play', (data) => {
+    console.log('▶️  Play command received');
+    syncCoordinator.handlePlay(data?.position);
+  });
+  
+  socket.on('pause', () => {
+    console.log('⏸️  Pause command received');
+    syncCoordinator.handlePause();
+  });
+  
+  socket.on('seek', (data) => {
+    console.log(`⏭️  Seek command received: ${data.position}ms`);
+    syncCoordinator.handleSeek(data.position);
+  });
+  
+  socket.on('next_track', () => {
+    console.log('⏭️  Next track command received');
+    playNextTrack();
+  });
+  
+  socket.on('previous_track', () => {
+    console.log('⏮️  Previous track command received');
+    playPreviousTrack();
+  });
+  
+  // Queue management
+  socket.on('add_to_queue', (data) => {
+    const track = musicFiles.find(f => f.name === data.filename);
+    if (track) {
+      queue.push(track);
+      console.log(`➕ Added to queue: ${track.title}`);
+      io.emit('queue_updated', queue);
+    }
+  });
+  
+  socket.on('clear_queue', () => {
+    queue = [];
+    console.log('🗑️  Queue cleared');
+    io.emit('queue_updated', queue);
+  });
+  
+  socket.on('play_track', (data) => {
+    const track = musicFiles.find(f => f.name === data.filename);
+    if (track) {
+      playTrack(track);
+    }
+  });
+  
+  // Disconnect handling
+  socket.on('disconnect', () => {
+    console.log(`🔌 Client disconnected: ${socket.id}`);
+    devices.delete(socket.id);
+    
+    // Stop sync coordinator if no devices left
+    if (devices.size === 0) {
+      syncCoordinator.stop();
+      syncCoordinator.handlePause(); // Pause playback
+    }
+    
+    // Broadcast device list update
+    io.emit('devices_update', Array.from(devices.values()));
+  });
+});
+
+// =============================================================================
+// TRACK PLAYBACK FUNCTIONS
+// =============================================================================
+
+function playTrack(track) {
+  console.log(`🎵 Playing track: ${track.title}`);
+  
+  playbackState.currentTrack = track;
+  playbackState.position = 0;
+  
+  // Start HTTP audio stream
+  startHttpAudioStream(track.path);
+  
+  // Update queue index if track is in queue
+  const queueIndex = queue.findIndex(q => q.name === track.name);
+  if (queueIndex !== -1) {
+    currentTrackIndex = queueIndex;
+  }
+  
+  // Start coordinated playback
+  syncCoordinator.handlePlay(0);
+  
+  // Broadcast track change
+  io.emit('track_changed', track);
+}
+
+function playNextTrack() {
+  if (queue.length === 0) return;
+  
+  currentTrackIndex = (currentTrackIndex + 1) % queue.length;
+  playTrack(queue[currentTrackIndex]);
+}
+
+function playPreviousTrack() {
+  if (queue.length === 0) return;
+  
+  currentTrackIndex = currentTrackIndex > 0 ? currentTrackIndex - 1 : queue.length - 1;
+  playTrack(queue[currentTrackIndex]);
+}
+
+// =============================================================================
+// HTTP ENDPOINTS
+// =============================================================================
+
+// Serve audio stream
+app.get('/stream/current', (req, res) => {
+  if (!httpAudioProcess || !playbackState.currentTrack) {
+    return res.status(404).send('No audio stream available');
+  }
+  
+  res.writeHead(200, {
+    'Content-Type': 'audio/mpeg',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*'
+  });
+  
+  httpAudioProcess.stdout.pipe(res);
+  
+  // Handle client disconnect
+  req.on('close', () => {
+    console.log('🔌 HTTP stream client disconnected');
+  });
+});
+
+// API endpoints
+app.get('/api/music', (req, res) => {
+  res.json({ files: musicFiles });
+});
+
+app.get('/api/queue', (req, res) => {
+  res.json({ queue: queue });
+});
+
+app.get('/api/status', (req, res) => {
+  res.json({
+    isPlaying: playbackState.isPlaying,
+    currentTrack: playbackState.currentTrack,
+    position: syncCoordinator.getCurrentPosition(),
+    devices: Array.from(devices.values()),
+    queue: queue
+  });
+});
+
+// Apple Music search endpoint (placeholder)
+app.get('/api/apple-music/search', (req, res) => {
+  // For now, return empty results since we don't have Apple Music integration yet
+  res.json([]);
+});
+
+// Test endpoint to simulate playing a track
+app.post('/api/test-play', (req, res) => {
+  if (musicFiles.length === 0) {
+    return res.status(400).json({ error: 'No music files available' });
+  }
+  
+  const firstTrack = musicFiles[0];
+  playTrack(firstTrack);
+  res.json({ 
+    message: 'Started playing test track',
+    track: firstTrack
+  });
+});
+
+// File upload
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, MUSIC_DIR);
-  },
+  destination: MUSIC_DIR,
   filename: (req, file, cb) => {
     cb(null, file.originalname);
   }
 });
-const upload = multer({ storage });
 
-// Middleware
-app.use(express.json());
-app.use(express.static('public'));
-
-// Load music files
-const loadMusicFiles = () => {
-  try {
-    if (!fs.existsSync(MUSIC_DIR)) {
-      fs.mkdirSync(MUSIC_DIR, { recursive: true });
-    }
-    
-    const files = fs.readdirSync(MUSIC_DIR)
-      .filter(file => ['.mp3', '.wav', '.flac', '.m4a'].includes(path.extname(file).toLowerCase()))
-      .map(file => ({
-        id: file,
-        name: path.parse(file).name,
-        path: path.join(MUSIC_DIR, file)
-      }));
-    
-    musicFiles = files;
-    logger.info(`Found ${files.length} music files`);
-    return files;
-  } catch (error) {
-    logger.error('Error loading music files:', error);
-    return [];
+const upload = multer({ 
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const allowed = /\.(mp3|wav|flac|m4a)$/i;
+    cb(null, allowed.test(file.originalname));
   }
-};
+});
 
-// Enhanced silence stream management
-const startSilenceStream = () => {
-  if (silenceStreamProcess && !silenceStreamProcess.killed) {
-    return; // Already running
-  }
-
-  logger.info('🔇 Starting continuous silence stream to keep FIFO active');
-
-  try {
-    // Use sub-audible 20Hz tone at 0.1% volume
-    silenceStreamProcess = spawn(FFMPEG_PATH, [
-      '-f', 'lavfi',
-      '-i', 'sine=frequency=20:sample_rate=48000:duration=0',
-      '-af', 'volume=0.001',  // Make it extremely quiet (0.1% volume)
-      '-f', 's16le',
-      '-ar', '48000',
-      '-ac', '2',
-      '-y',  // Auto-overwrite without prompting
-      SNAPCAST_FIFO
-    ], {
-      stdio: ['ignore', 'pipe', 'pipe']  // Pipe both stdout and stderr for debugging
-    });
-
-    // Handle process events
-    silenceStreamProcess.on('spawn', () => {
-      logger.success('✅ Silence stream process spawned successfully');
-      
-      // Check if process is actually running after a short delay
-      setTimeout(() => {
-        if (silenceStreamProcess && !silenceStreamProcess.killed) {
-          logger.info('🔍 Silence stream still running after 2 seconds');
-        } else {
-          logger.error('❌ Silence stream died within 2 seconds');
-        }
-      }, 2000);
-    });
-
-    silenceStreamProcess.on('error', (error) => {
-      logger.error('❌ Silence stream spawn error:', error.message);
-      silenceStreamProcess = null;
-      // Restart after 3 seconds
-      setTimeout(startSilenceStream, 3000);
-    });
-
-    silenceStreamProcess.on('exit', (code, signal) => {
-      if (code !== null) {
-        logger.warn(`⚠️  Silence stream exited with code ${code}`);
-      }
-      if (signal) {
-        logger.warn(`⚠️  Silence stream killed with signal ${signal}`);
-      }
-      silenceStreamProcess = null;
-      
-      // Only restart if it wasn't intentionally killed AND no music is playing
-      if (signal !== 'SIGTERM' && signal !== 'SIGKILL' && !audioStreamProcess) {
-        logger.info('🔄 Restarting silence stream in 3 seconds...');
-        setTimeout(startSilenceStream, 3000);
-      } else if (audioStreamProcess) {
-        logger.info('🎵 Music is playing - silence stream will not restart');
-      }
-    });
-
-    // Monitor stdout for FFmpeg output
-    if (silenceStreamProcess.stdout) {
-      silenceStreamProcess.stdout.on('data', (data) => {
-        // Only log if there are actual errors, not normal output
-        const output = data.toString();
-        if (output.includes('Error') || output.includes('Failed')) {
-          logger.info('FFmpeg stdout:', output.trim());
-        }
-      });
-    }
-
-    // Monitor stderr for FFmpeg errors and normal output
-    if (silenceStreamProcess.stderr) {
-      silenceStreamProcess.stderr.on('data', (data) => {
-        const output = data.toString().trim();
-        
-        // Log specific errors
-        if (output.includes('Error') || output.includes('Failed') || output.includes('Broken pipe')) {
-          logger.error('❌ FFmpeg silence error:', output);
-        }
-      });
-    }
-
-    logger.success('🎵 Silence stream started - Snapcast should stay active');
-
-  } catch (error) {
-    logger.error('❌ Failed to start silence stream:', error.message);
-    silenceStreamProcess = null;
-    setTimeout(startSilenceStream, 5000);
-  }
-};
-
-// Enhanced stopSilenceStream function
-const stopSilenceStream = () => {
-  if (silenceStreamProcess && !silenceStreamProcess.killed) {
-    logger.info('🛑 Stopping silence stream');
-    
-    try {
-      // Try graceful termination first
-      silenceStreamProcess.kill('SIGTERM');
-      
-      // Force kill after 2 seconds if still running
-      setTimeout(() => {
-        if (silenceStreamProcess && !silenceStreamProcess.killed) {
-          logger.warn('🔨 Force killing silence stream');
-          silenceStreamProcess.kill('SIGKILL');
-        }
-      }, 2000);
-      
-    } catch (error) {
-      logger.error('Error stopping silence stream:', error.message);
-    }
-    
-    silenceStreamProcess = null;
-  }
-};
-
-// Enhanced audio stream management with HTTP streaming
-const startAudioStream = (filePath) => {
-  return new Promise((resolve, reject) => {
-    // Stop silence stream when starting music
-    stopSilenceStream();
-    
-    // Small delay to ensure silence stream stops cleanly
-    setTimeout(() => {
-      // Stop any existing audio streams
-      if (audioStreamProcess && !audioStreamProcess.killed) {
-        audioStreamProcess.kill('SIGTERM');
-      }
-      if (httpAudioProcess && !httpAudioProcess.killed) {
-        httpAudioProcess.kill('SIGTERM');
-      }
-
-      logger.info(`🎵 Starting audio stream: ${path.basename(filePath)}`);
-
-      // Create FFmpeg process for Snapcast (FIFO)
-      audioStreamProcess = spawn(FFMPEG_PATH, [
-        '-i', filePath,
-        '-f', 's16le',
-        '-ar', '48000',
-        '-ac', '2',
-        '-bufsize', '128k',  // Increased buffer for smoother playback
-        '-af', 'aresample=async=1',  // Audio resampling for sync
-        '-y',
-        SNAPCAST_FIFO
-      ], {
-        stdio: ['ignore', 'pipe', 'pipe']
-      });
-
-      // Create separate FFmpeg process for HTTP streaming (Chromecast)
-      httpAudioProcess = spawn(FFMPEG_PATH, [
-        '-i', filePath,
-        '-f', 'mp3',
-        '-acodec', 'mp3',
-        '-ab', '192k',
-        '-ar', '44100',
-        '-ac', '2',
-        '-'
-      ], {
-        stdio: ['ignore', 'pipe', 'pipe']
-      });
-
-      // Handle Snapcast audio stream events
-      audioStreamProcess.on('spawn', () => {
-        logger.success(`✅ Audio stream started: ${path.basename(filePath)}`);
-        resolve();
-      });
-
-      audioStreamProcess.on('error', (error) => {
-        logger.error('❌ Audio stream error:', error.message);
-        startSilenceStream();
-        reject(error);
-      });
-
-      audioStreamProcess.on('exit', (code, signal) => {
-        logger.info(`🎵 Audio stream ended: ${path.basename(filePath)} (code: ${code})`);
-        audioStreamProcess = null;
-        
-        // Stop HTTP streaming when main audio ends
-        if (httpAudioProcess && !httpAudioProcess.killed) {
-          httpAudioProcess.kill('SIGTERM');
-        }
-        
-        // Check if we should auto-play next track
-        if (currentTrackIndex < queue.length - 1) {
-          logger.info('⏭️  Auto-playing next track...');
-          setTimeout(async () => {
-            currentTrackIndex++;
-            await playCurrentTrack();
-          }, 300); // 300ms delay for smooth transitions
-        } else {
-          logger.info('🏁 End of queue reached');
-          isPlaying = false;
-          currentTrackIndex = -1;
-          
-          // Broadcast final state
-          io.emit('update_state', {
-            files: musicFiles,
-            queue,
-            currentTrackIndex,
-            isPlaying
-          });
-          
-          // Restart silence stream when all music ends
-          setTimeout(startSilenceStream, 500);
-        }
-        resolve();
-      });
-
-      // Handle HTTP streaming for Chromecast
-      httpAudioProcess.on('spawn', () => {
-        logger.success(`📡 HTTP audio stream started: ${path.basename(filePath)}`);
-      });
-
-      httpAudioProcess.stdout.on('data', (chunk) => {
-        // Send audio data to all connected HTTP clients
-        httpStreamClients.forEach((client, index) => {
-          if (client.destroyed) {
-            httpStreamClients.splice(index, 1);
-          } else {
-            try {
-              client.write(chunk);
-            } catch (error) {
-              logger.warn('HTTP client write error:', error.message);
-              client.destroy();
-              httpStreamClients.splice(index, 1);
-            }
-          }
-        });
-      });
-
-      httpAudioProcess.on('error', (error) => {
-        logger.error('HTTP audio stream error:', error.message);
-      });
-
-      httpAudioProcess.on('exit', (code, signal) => {
-        logger.info(`📡 HTTP audio stream ended: ${path.basename(filePath)}`);
-        httpAudioProcess = null;
-        
-        // Close all HTTP streaming clients
-        httpStreamClients.forEach(client => {
-          if (!client.destroyed) {
-            client.end();
-          }
-        });
-        httpStreamClients = [];
-      });
-
-      // Monitor stderr for actual errors
-      if (audioStreamProcess.stderr) {
-        audioStreamProcess.stderr.on('data', (data) => {
-          const errorText = data.toString();
-          if (errorText.includes('Error') || errorText.includes('Failed')) {
-            logger.error('FFmpeg audio error:', errorText.trim());
-          }
-        });
-      }
-
-    }, 200); // 200ms delay for clean transition
-  });
-};
-
-const stopAudioStream = () => {
-  if (audioStreamProcess && !audioStreamProcess.killed) {
-    logger.info('🛑 Stopping audio stream');
-    audioStreamProcess.kill('SIGTERM');
-    audioStreamProcess = null;
-  }
-  
-  if (httpAudioProcess && !httpAudioProcess.killed) {
-    logger.info('🛑 Stopping HTTP audio stream');
-    httpAudioProcess.kill('SIGTERM');
-    httpAudioProcess = null;
-  }
-  
-  // Close HTTP clients
-  httpStreamClients.forEach(client => {
-    if (!client.destroyed) {
-      client.end();
-    }
-  });
-  httpStreamClients = [];
-  
-  // Restart silence stream when stopping music
-  setTimeout(startSilenceStream, 500);
-};
-
-// Enhanced playback control
-const playCurrentTrack = async () => {
-  if (currentTrackIndex < 0 || currentTrackIndex >= queue.length || isTransitioning) {
-    return;
-  }
-
-  isTransitioning = true;
-  const track = queue[currentTrackIndex];
-  
-  try {
-    await startAudioStream(track.path);
-    isPlaying = true;
-    logger.success(`▶️  Now playing: ${track.name}`);
-    
-    // Broadcast state update
-    io.emit('update_state', {
-      files: musicFiles,
-      queue,
-      currentTrackIndex,
-      isPlaying,
-      currentTrack: track
-    });
-
-  } catch (error) {
-    logger.error('Failed to start playback:', error);
-    isPlaying = false;
-    
-    io.emit('stream_error', {
-      message: `Failed to play: ${track.name}`,
-      track: track
-    });
-  } finally {
-    isTransitioning = false;
-  }
-};
-
-const stopPlayback = () => {
-  if (isTransitioning) return;
-  
-  isTransitioning = true;
-  stopAudioStream();
-  isPlaying = false;
-  
-  logger.info('⏹️  Playback stopped');
-  
-  io.emit('update_state', {
-    files: musicFiles,
-    queue,
-    currentTrackIndex,
-    isPlaying
-  });
-  
-  setTimeout(() => {
-    isTransitioning = false;
-  }, 500);
-};
-
-const playNext = async () => {
-  if (currentTrackIndex < queue.length - 1) {
-    currentTrackIndex++;
-    await playCurrentTrack();
+app.post('/api/upload', upload.single('music'), (req, res) => {
+  if (req.file) {
+    initializeMusicLibrary(); // Refresh library
+    io.emit('library_updated', musicFiles);
+    res.json({ success: true, filename: req.file.filename });
   } else {
-    stopPlayback();
-    logger.info('🏁 End of queue reached');
-  }
-};
-
-// REST API endpoints
-app.get('/health', (req, res) => {
-  const health = {
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    snapcastFifo: fs.existsSync(SNAPCAST_FIFO),
-    musicDir: fs.existsSync(MUSIC_DIR),
-    fileCount: musicFiles.length,
-    silenceStreamActive: silenceStreamProcess && !silenceStreamProcess.killed,
-    audioStreamActive: audioStreamProcess && !audioStreamProcess.killed,
-    httpStreamActive: httpAudioProcess && !httpAudioProcess.killed,
-    httpClients: httpStreamClients.length,
-    currentState: {
-      isPlaying,
-      currentTrackIndex,
-      queueLength: queue.length,
-      isTransitioning
-    }
-  };
-  res.json(health);
-});
-
-app.get('/files', (req, res) => {
-  res.json(musicFiles);
-});
-
-app.get('/queue', (req, res) => {
-  res.json({
-    queue,
-    currentTrackIndex,
-    isPlaying
-  });
-});
-
-// HTTP Audio Streaming Endpoint for Chromecast
-app.get('/stream/current', (req, res) => {
-  logger.info('📡 New HTTP audio stream client connected');
-  
-  res.set({
-    'Content-Type': 'audio/mpeg',
-    'Transfer-Encoding': 'chunked',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Range'
-  });
-
-  // Add client to streaming list
-  httpStreamClients.push(res);
-  
-  // Remove client when connection closes
-  req.on('close', () => {
-    const index = httpStreamClients.indexOf(res);
-    if (index > -1) {
-      httpStreamClients.splice(index, 1);
-      logger.info('📡 HTTP audio stream client disconnected');
-    }
-  });
-
-  req.on('error', () => {
-    const index = httpStreamClients.indexOf(res);
-    if (index > -1) {
-      httpStreamClients.splice(index, 1);
-    }
-  });
-});
-
-app.post('/upload', upload.single('music'), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-    
-    logger.info(`📁 File uploaded: ${req.file.filename}`);
-    loadMusicFiles(); // Refresh the file list
-    
-    io.emit('update_state', {
-      files: musicFiles,
-      queue,
-      currentTrackIndex,
-      isPlaying
-    });
-    
-    res.json({ 
-      message: 'File uploaded successfully',
-      file: req.file.filename 
-    });
-  } catch (error) {
-    logger.error('Upload error:', error);
-    res.status(500).json({ error: 'Upload failed' });
+    res.status(400).json({ error: 'No valid audio file uploaded' });
   }
 });
 
-// Socket.IO connection handling
-io.on('connection', (socket) => {
-  logger.info(`🔌 Client connected: ${socket.id} from ${socket.handshake.address}`);
-
-  // Send initial data
-  socket.emit('initial_data', {
-    files: musicFiles,
-    queue,
-    currentTrackIndex,
-    isPlaying
-  });
-
-  // Add to queue
-  socket.on('add_to_queue', (fileId) => {
-    try {
-      const file = musicFiles.find(f => f.id === fileId);
-      if (file) {
-        queue.push(file);
-        logger.info(`➕ Added to queue: ${file.name}`);
-        
-        io.emit('update_state', {
-          files: musicFiles,
-          queue,
-          currentTrackIndex,
-          isPlaying
-        });
-      }
-    } catch (error) {
-      logger.error('Error adding to queue:', error);
-      socket.emit('stream_error', { message: 'Failed to add to queue' });
-    }
-  });
-
-  // Remove from queue
-  socket.on('remove_from_queue', (index) => {
-    try {
-      if (index >= 0 && index < queue.length) {
-        const removed = queue.splice(index, 1)[0];
-        logger.info(`➖ Removed from queue: ${removed.name}`);
-        
-        // Adjust current index if necessary
-        if (index < currentTrackIndex) {
-          currentTrackIndex--;
-        } else if (index === currentTrackIndex && isPlaying) {
-          // If we removed the currently playing track, stop and play next
-          stopPlayback();
-          if (currentTrackIndex < queue.length) {
-            setTimeout(() => playCurrentTrack(), 1000);
-          }
-        }
-        
-        io.emit('update_state', {
-          files: musicFiles,
-          queue,
-          currentTrackIndex,
-          isPlaying
-        });
-      }
-    } catch (error) {
-      logger.error('Error removing from queue:', error);
-      socket.emit('stream_error', { message: 'Failed to remove from queue' });
-    }
-  });
-
-  // Clear queue
-  socket.on('clear_queue', () => {
-    try {
-      stopPlayback();
-      queue = [];
-      currentTrackIndex = -1;
-      logger.info('🗑️  Queue cleared');
-      
-      io.emit('update_state', {
-        files: musicFiles,
-        queue,
-        currentTrackIndex,
-        isPlaying
-      });
-    } catch (error) {
-      logger.error('Error clearing queue:', error);
-    }
-  });
-
-  // Play/pause
-  socket.on('play_pause', async () => {
-    try {
-      if (isPlaying) {
-        stopPlayback();
-      } else {
-        if (queue.length > 0) {
-          if (currentTrackIndex < 0) {
-            currentTrackIndex = 0;
-          }
-          await playCurrentTrack();
-        }
-      }
-    } catch (error) {
-      logger.error('Error in play/pause:', error);
-      socket.emit('stream_error', { message: 'Playback control failed' });
-    }
-  });
-
-  // Next track
-  socket.on('next_track', async () => {
-    try {
-      await playNext();
-    } catch (error) {
-      logger.error('Error playing next track:', error);
-      socket.emit('stream_error', { message: 'Failed to play next track' });
-    }
-  });
-
-  // Previous track
-  socket.on('previous_track', async () => {
-    try {
-      if (currentTrackIndex > 0) {
-        currentTrackIndex--;
-        await playCurrentTrack();
-      }
-    } catch (error) {
-      logger.error('Error playing previous track:', error);
-      socket.emit('stream_error', { message: 'Failed to play previous track' });
-    }
-  });
-
-  // Skip to track
-  socket.on('skip_to_track', async (index) => {
-    try {
-      if (index >= 0 && index < queue.length) {
-        currentTrackIndex = index;
-        await playCurrentTrack();
-      }
-    } catch (error) {
-      logger.error('Error skipping to track:', error);
-      socket.emit('stream_error', { message: 'Failed to skip to track' });
-    }
-  });
-
-  socket.on('disconnect', (reason) => {
-    logger.info(`🔌 Client disconnected: ${socket.id}, reason: ${reason}`);
-  });
-
-  socket.on('error', (error) => {
-    logger.error(`Socket error from ${socket.id}:`, error);
-  });
+// Serve React client
+app.use(express.static(path.join(__dirname, 'client/build')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/build/index.html'));
 });
 
-// Process cleanup handlers
+// =============================================================================
+// SERVER STARTUP
+// =============================================================================
+
+// Initialize and start server
+initializeMusicLibrary();
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ 🎵 Pure Socket.IO Music Server running on port ${PORT}`);
+  console.log(`ℹ️  Server accessible at: http://192.168.12.125:${PORT}`);
+  console.log(`ℹ️  Configuration: {
+  musicDir: '${MUSIC_DIR}',
+  fileCount: ${musicFiles.length},
+  syncTolerance: ${syncCoordinator.syncTolerance}ms
+}`);
+});
+
+// Graceful shutdown
 process.on('SIGINT', () => {
-  logger.info('🛑 Shutting down server...');
-  stopSilenceStream();
-  stopAudioStream();
-  process.exit(0);
+  console.log('\n⏹️  Shutting down gracefully...');
+  syncCoordinator.stop();
+  stopHttpAudioStream();
+  server.close(() => {
+    console.log('✅ Server shut down');
+    process.exit(0);
+  });
 });
 
 process.on('SIGTERM', () => {
-  logger.info('🛑 Server terminated');
-  stopSilenceStream();
-  stopAudioStream();
-  process.exit(0);
-});
-
-process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception:', error);
-  stopSilenceStream();
-  stopAudioStream();
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-// Start server
-
-// Latency compensation API endpoints
-app.get('/api/latency', (req, res) => {
-  res.json({
-    delays: AUDIO_DELAYS,
-    activeZones: activeZones
+  console.log('\n⏹️  Received SIGTERM, shutting down gracefully...');
+  syncCoordinator.stop();
+  stopHttpAudioStream();
+  server.close(() => {
+    console.log('✅ Server shut down');
+    process.exit(0);
   });
 });
-
-app.post('/api/latency/delays', (req, res) => {
-  const { snapcast, chromecast, bluetooth } = req.body;
-  if (snapcast !== undefined) AUDIO_DELAYS.snapcast = parseInt(snapcast);
-  if (chromecast !== undefined) AUDIO_DELAYS.chromecast = parseInt(chromecast);
-  if (bluetooth !== undefined) AUDIO_DELAYS.bluetooth = parseInt(bluetooth);
-  console.log(`🎛️ Latency delays updated: ${JSON.stringify(AUDIO_DELAYS)}`);
-  io.emit('latencyUpdate', { delays: AUDIO_DELAYS, activeZones });
-  res.json({ success: true, delays: AUDIO_DELAYS });
-});
-
-server.listen(PORT, () => {
-  logger.success(`🎵 Snapcast Music Server running on port ${PORT}`);
-  
-  // Load music files
-  loadMusicFiles();
-  
-  // Log configuration
-  logger.info('Configuration:', {
-    musicDir: MUSIC_DIR,
-    snapcastFifo: SNAPCAST_FIFO,
-    fileCount: musicFiles.length
-  });
-  
-  // Start silence stream after short delay
-  setTimeout(() => {
-    startSilenceStream();
-  }, 2000);
-});
-
-module.exports = app;

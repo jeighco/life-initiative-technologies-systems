@@ -1,0 +1,114 @@
+{
+  "name": "Multi-Room Music",
+  "short_name": "Multi-Room Music",
+  "description": "Synchronized audio streaming across your home with intelligent device detection",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#4ade80",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-US",
+  "dir": "ltr",
+  "categories": ["music", "entertainment", "utilities"],
+  "screenshots": [
+    {
+      "src": "/assets/screenshot-1.jpg",
+      "sizes": "1170x2532",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Music library and queue management"
+    },
+    {
+      "src": "/assets/screenshot-2.jpg", 
+      "sizes": "1170x2532",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Multi-room audio zone control"
+    }
+  ],
+  "icons": [
+    {
+      "src": "/assets/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/icon-96x96.png",
+      "sizes": "96x96", 
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open Music Player",
+      "short_name": "Play Music",
+      "description": "Quick access to music playback controls",
+      "url": "/app?utm_source=homescreen",
+      "icons": [
+        {
+          "src": "/assets/shortcut-play.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Audio Zones",
+      "short_name": "Zones",
+      "description": "Manage multi-room audio zones",
+      "url": "/app/zones?utm_source=homescreen",
+      "icons": [
+        {
+          "src": "/assets/shortcut-zones.png", 
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "itunes",
+      "url": "https://apps.apple.com/app/multi-room-music/YOUR_APP_ID",
+      "id": "YOUR_APP_ID"
+    }
+  ],
+  "prefer_related_applications": true
+}
