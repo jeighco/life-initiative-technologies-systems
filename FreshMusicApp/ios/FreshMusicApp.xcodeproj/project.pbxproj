@@ -181,7 +181,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\necho \"🚀 Installing CocoaPods dependencies...\"\nif [ ! -d \"Pods\" ]; then\n  echo \"📦 Running pod install...\"\n  pod install\nelse\n  echo \"✅ Pods directory exists, skipping pod install\"\nfi\n\necho \"📦 Bundling React Native code...\"\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
+			shellScript = "set -e\n\necho \"🚀 Setting up dependencies for Xcode Cloud...\"\necho \"📍 Current directory: $(pwd)\"\n\n# Navigate to project root first\ncd ../../\necho \"📍 Project root directory: $(pwd)\"\nls -la\n\n# Install npm dependencies if needed\nif [ ! -d \"node_modules\" ]; then\n  echo \"📦 Installing npm dependencies...\"\n  npm install\nelse\n  echo \"✅ node_modules exists\"\nfi\n\n# Navigate back to iOS directory\ncd ios\necho \"📍 iOS directory: $(pwd)\"\n\n# Install CocoaPods dependencies\nif [ ! -d \"Pods\" ] || [ ! -f \"Pods/Target Support Files/Pods-FreshMusicApp/Pods-FreshMusicApp.release.xcconfig\" ]; then\n  echo \"📦 Running pod install...\"\n  pod install --verbose\n  echo \"✅ CocoaPods installation complete\"\nelse\n  echo \"✅ Pods directory and config files exist, skipping pod install\"\nfi\n\necho \"📦 Bundling React Native code...\"\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
 		};
 		210AEF31F9013CF97770B7D2 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
