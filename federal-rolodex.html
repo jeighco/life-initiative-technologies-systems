@@ -43,9 +43,9 @@
 
         @media (max-width: 768px) and (orientation: landscape) {
             .container {
-                grid-template-columns: 2fr 1fr;
-                gap: 15px;
-                padding: 10px;
+                grid-template-columns: 1.8fr 1fr;
+                gap: 10px;
+                padding: 8px;
                 min-height: auto;
             }
         }
@@ -65,6 +65,9 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
         .rolodex-title {
@@ -79,16 +82,23 @@
         .rolodex-wrapper {
             position: relative;
             width: 100%;
-            max-width: 500px;
+            max-width: 480px;
             height: 300px;
             transform-style: preserve-3d;
             margin: 0 auto;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 768px) and (orientation: portrait) {
             .rolodex-wrapper {
                 height: 250px;
-                max-width: 400px;
+                max-width: 350px;
+            }
+        }
+
+        @media (max-width: 768px) and (orientation: landscape) {
+            .rolodex-wrapper {
+                height: 200px;
+                max-width: 320px;
             }
         }
 
@@ -112,7 +122,7 @@
         .card {
             position: absolute;
             width: 100%;
-            max-width: 480px;
+            max-width: 460px;
             height: 80px;
             background: linear-gradient(135deg, #001100 0%, #003300 50%, #001100 100%);
             border: 2px solid #00ff00;
@@ -132,11 +142,19 @@
             backface-visibility: hidden;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 768px) and (orientation: portrait) {
             .card {
-                max-width: 380px;
+                max-width: 330px;
                 height: 70px;
                 padding: 0 15px;
+            }
+        }
+
+        @media (max-width: 768px) and (orientation: landscape) {
+            .card {
+                max-width: 300px;
+                height: 60px;
+                padding: 0 12px;
             }
         }
 
@@ -207,12 +225,21 @@
             max-height: 500px;
             overflow-y: auto;
             height: fit-content;
+            box-sizing: border-box;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 768px) and (orientation: portrait) {
             .new-cases-container {
                 max-height: 400px;
                 padding: 15px;
+            }
+        }
+
+        @media (max-width: 768px) and (orientation: landscape) {
+            .new-cases-container {
+                max-height: 300px;
+                padding: 12px;
+                font-size: 12px;
             }
         }
 
