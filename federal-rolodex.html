@@ -50,14 +50,12 @@
                 height: auto;
                 min-height: 100vh;
                 gap: 20px;
-                padding: 15px 20px 15px 25px;
+                padding: 15px;
             }
 
             .rolodex-container {
                 width: 100%;
                 flex: none;
-                padding-left: 10px;
-                padding-right: 5px;
             }
 
             .new-cases-container {
@@ -103,30 +101,32 @@
             text-align: center;
             font-size: 20px;
             font-weight: bold;
-            margin-bottom: 30px;
+            margin-bottom: 80px;
             text-shadow: 0 0 10px #00ff00;
+            padding: 0 20px;
         }
 
-        @media (max-width: 768px) and (orientation: portrait) {
+        @media (max-width: 768px) {
             .rolodex-title {
                 font-size: 18px;
-                margin-bottom: 40px;
+                margin-bottom: 60px;
             }
         }
 
         .rolodex-wrapper {
             position: relative;
             width: 100%;
-            max-width: 500px;
-            height: 300px;
+            max-width: 700px;
+            height: 400px;
             transform-style: preserve-3d;
             margin: 0 auto;
+            overflow: hidden;
         }
 
         @media (max-width: 768px) and (orientation: portrait) {
             .rolodex-wrapper {
                 height: 250px;
-                max-width: calc(95vw - 10px);
+                max-width: 350px;
             }
         }
 
@@ -156,8 +156,8 @@
 
         .card {
             position: absolute;
-            width: 100%;
-            max-width: 480px;
+            width: 80vw;
+            max-width: 600px;
             height: 80px;
             background: linear-gradient(135deg, #001100 0%, #003300 50%, #001100 100%);
             border: 2px solid #00ff00;
@@ -175,22 +175,27 @@
             color: #00ff00;
             transform-origin: center center;
             backface-visibility: hidden;
+            left: 50%;
+            margin-left: -40vw;
         }
 
         @media (max-width: 768px) and (orientation: portrait) {
             .card {
-                max-width: calc(90vw - 15px);
+                width: 85vw;
+                max-width: 500px;
                 height: 70px;
                 padding: 0 15px;
-                margin-left: 5px;
+                margin-left: -42.5vw;
             }
         }
 
         @media (max-width: 1024px) and (orientation: landscape) {
             .card {
-                max-width: 380px;
+                width: 75vw;
+                max-width: 550px;
                 height: 60px;
                 padding: 0 12px;
+                margin-left: -37.5vw;
             }
         }
 
@@ -227,13 +232,13 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 350px;
+            max-width: 50vw;
         }
 
         @media (max-width: 768px) {
             .case-title {
                 font-size: 14px;
-                max-width: 250px;
+                max-width: 45vw;
             }
 
             .case-number {
@@ -248,7 +253,7 @@
         @media (max-width: 1024px) and (orientation: landscape) {
             .case-title {
                 font-size: 13px;
-                max-width: 280px;
+                max-width: 40vw;
             }
 
             .case-number {
@@ -339,12 +344,6 @@
             justify-content: center;
         }
 
-        @media (max-width: 768px) and (orientation: portrait) {
-            .controls {
-                margin-top: 40px;
-            }
-        }
-
         .control-btn {
             background: rgba(0, 255, 0, 0.2);
             border: 1px solid #00ff00;
@@ -408,7 +407,7 @@
 
     <div class="container" id="main-container" style="display: none;">
         <div class="rolodex-container">
-            <div class="rolodex-title">FEDERAL CASE ARCHIVE</div>
+            <div class="rolodex-title">FEDERAL CASES ARCHIVE</div>
             <div class="rolodex-wrapper">
                 <div class="rolodex" id="rolodex">
                     <!-- Cards will be populated here -->
