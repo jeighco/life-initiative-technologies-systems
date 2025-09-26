@@ -11,7 +11,13 @@
             font-family: 'Courier New', monospace;
             margin: 0;
             padding: 0;
-            overflow: hidden;
+            overflow-x: hidden;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                overflow: auto;
+            }
         }
 
         .container {
@@ -19,9 +25,20 @@
             grid-template-columns: 3fr 1fr;
             gap: 20px;
             padding: 20px;
-            height: 100vh;
+            min-height: 100vh;
             max-width: 1400px;
             margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto;
+                gap: 30px;
+                padding: 15px;
+                min-height: auto;
+            }
         }
 
         .rolodex-container {
@@ -44,9 +61,18 @@
 
         .rolodex-wrapper {
             position: relative;
-            width: 500px;
+            width: 100%;
+            max-width: 500px;
             height: 300px;
             transform-style: preserve-3d;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 768px) {
+            .rolodex-wrapper {
+                height: 250px;
+                max-width: 400px;
+            }
         }
 
         .rolodex {
@@ -68,7 +94,8 @@
 
         .card {
             position: absolute;
-            width: 480px;
+            width: 100%;
+            max-width: 480px;
             height: 80px;
             background: linear-gradient(135deg, #001100 0%, #003300 50%, #001100 100%);
             border: 2px solid #00ff00;
@@ -86,6 +113,14 @@
             color: #00ff00;
             transform-origin: center center;
             backface-visibility: hidden;
+        }
+
+        @media (max-width: 768px) {
+            .card {
+                max-width: 380px;
+                height: 70px;
+                padding: 0 15px;
+            }
         }
 
         .card:hover {
@@ -124,6 +159,21 @@
             max-width: 350px;
         }
 
+        @media (max-width: 768px) {
+            .case-title {
+                font-size: 14px;
+                max-width: 250px;
+            }
+
+            .case-number {
+                font-size: 12px;
+            }
+
+            .case-meta {
+                font-size: 10px;
+            }
+        }
+
         .case-meta {
             color: #00cccc;
             font-size: 12px;
@@ -139,6 +189,14 @@
             box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
             max-height: 500px;
             overflow-y: auto;
+            height: fit-content;
+        }
+
+        @media (max-width: 768px) {
+            .new-cases-container {
+                max-height: 400px;
+                padding: 15px;
+            }
         }
 
         .new-cases-title {
