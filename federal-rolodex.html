@@ -176,8 +176,7 @@
 
         .card {
             position: absolute;
-            width: 72vw;
-            max-width: 540px;
+            width: min(72vw, 540px);
             height: 72px;
             background: linear-gradient(135deg, #001100 0%, #003300 50%, #001100 100%);
             border: 2px solid #00ff00;
@@ -196,7 +195,7 @@
             transform-origin: center center;
             backface-visibility: hidden;
             left: 50%;
-            margin-left: -30vw;
+            transform: translateX(-50%);
         }
 
         @media (max-width: 768px) and (orientation: portrait) {
@@ -206,6 +205,7 @@
                 height: 63px;
                 padding: 0 13px;
                 margin-left: -42.5vw;
+                transform: none;
             }
         }
 
@@ -215,7 +215,8 @@
                 max-width: 495px;
                 height: 54px;
                 padding: 0 11px;
-                margin-left: -28vw;
+                left: 50%;
+                transform: translateX(-50%);
             }
         }
 
@@ -238,6 +239,8 @@
             display: flex;
             flex-direction: column;
             gap: 5px;
+            min-width: 0;
+            flex: 1;
         }
 
         .case-number {
@@ -252,13 +255,14 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 50vw;
+            max-width: calc(min(72vw, 540px) - 120px);
+            flex-shrink: 1;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 768px) and (orientation: portrait) {
             .case-title {
                 font-size: 14px;
-                max-width: 45vw;
+                max-width: calc(85vw - 100px);
             }
 
             .case-number {
@@ -270,10 +274,10 @@
             }
         }
 
-        @media (max-width: 1024px) and (orientation: landscape) {
+        @media (max-width: 768px) and (orientation: landscape) {
             .case-title {
                 font-size: 13px;
-                max-width: 40vw;
+                max-width: calc(67.5vw - 100px);
             }
 
             .case-number {
@@ -282,6 +286,21 @@
 
             .case-meta {
                 font-size: 9px;
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .case-title {
+                font-size: 14px;
+                max-width: calc(min(72vw, 540px) - 100px);
+            }
+
+            .case-number {
+                font-size: 12px;
+            }
+
+            .case-meta {
+                font-size: 10px;
             }
         }
 
