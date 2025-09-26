@@ -430,7 +430,7 @@
                     card.href = case_.url;
                     card.target = '_blank';
 
-                    const angle = (index / this.casesPerPage) * 360;
+                    const angle = (index / pageCases.length) * 360;
                     const radius = 150;
 
                     card.style.transform = `rotateX(${angle}deg) translateZ(${radius}px)`;
