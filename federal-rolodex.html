@@ -105,10 +105,10 @@
             text-shadow: 0 0 10px #00ff00;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 768px) and (orientation: portrait) {
             .rolodex-title {
                 font-size: 18px;
-                margin-bottom: 20px;
+                margin-bottom: 40px;
             }
         }
 
@@ -124,7 +124,7 @@
         @media (max-width: 768px) and (orientation: portrait) {
             .rolodex-wrapper {
                 height: 250px;
-                max-width: 350px;
+                max-width: 95vw;
             }
         }
 
@@ -177,7 +177,7 @@
 
         @media (max-width: 768px) and (orientation: portrait) {
             .card {
-                max-width: 330px;
+                max-width: 90vw;
                 height: 70px;
                 padding: 0 15px;
             }
@@ -336,6 +336,12 @@
             justify-content: center;
         }
 
+        @media (max-width: 768px) and (orientation: portrait) {
+            .controls {
+                margin-top: 40px;
+            }
+        }
+
         .control-btn {
             background: rgba(0, 255, 0, 0.2);
             border: 1px solid #00ff00;
@@ -399,7 +405,7 @@
 
     <div class="container" id="main-container" style="display: none;">
         <div class="rolodex-container">
-            <div class="rolodex-title">FEDERAL CASES ARCHIVE</div>
+            <div class="rolodex-title">FEDERAL CASE ARCHIVE</div>
             <div class="rolodex-wrapper">
                 <div class="rolodex" id="rolodex">
                     <!-- Cards will be populated here -->
