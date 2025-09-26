@@ -34,8 +34,24 @@
             .rolodex-container {
                 flex: 2;
                 max-width: 600px;
-                margin-left: 100px;  /* Add this - pushes rolodex right */
-                margin-right: 30px; /* Add this - creates right boundary */
+            }
+
+            .new-cases-container {
+                flex: 1;
+                max-width: 400px;
+                height: 500px;
+            }
+        }
+
+        /* Tablet Landscape (between mobile landscape and desktop) */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .container {
+                flex-direction: row;
+            }
+
+            .rolodex-container {
+                flex: 2;
+                max-width: 600px;
             }
 
             .new-cases-container {
@@ -69,7 +85,7 @@
         }
 
         /* Landscape Mobile/Tablet */
-        @media (max-width: 1024px) and (orientation: landscape) {
+        @media (max-width: 768px) and (orientation: landscape) {
             .container {
                 flex-direction: row;
                 gap: 20px;
@@ -78,7 +94,7 @@
 
             .rolodex-container {
                 flex: 1.5;
-                max-width: 450px;
+                max-width: 500px;
             }
 
             .new-cases-container {
@@ -134,10 +150,10 @@
             }
         }
 
-        @media (max-width: 1024px) and (orientation: landscape) {
+        @media (max-width: 768px) and (orientation: landscape) {
             .rolodex-wrapper {
                 height: 200px;
-                max-width: 400px;
+                max-width: 450px;
             }
         }
 
@@ -193,7 +209,7 @@
             }
         }
 
-        @media (max-width: 1024px) and (orientation: landscape) {
+        @media (max-width: 768px) and (orientation: landscape) {
             .card {
                 width: 67.5vw;
                 max-width: 495px;
