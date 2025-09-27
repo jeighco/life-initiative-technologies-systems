@@ -554,15 +554,22 @@
         }
 
         .selected-card-active {
-            animation: wiggle 0.6s ease-in-out infinite alternate;
             transform: translateX(-50%) scale(1.1) !important;
             box-shadow: 0 0 30px rgba(0, 255, 0, 0.9) !important;
             z-index: 100 !important;
+            transition: transform 0.1s ease;
+        }
+
+        .selected-card-active:hover,
+        .selected-card-active:active {
+            animation: wiggle 0.3s ease-in-out;
         }
 
         @keyframes wiggle {
-            0% { transform: translateX(-50%) scale(1.1) rotate(-1deg); }
-            100% { transform: translateX(-50%) scale(1.1) rotate(1deg); }
+            0% { transform: translateX(-50%) scale(1.1) rotate(0deg); }
+            25% { transform: translateX(-50%) scale(1.1) rotate(-2deg); }
+            75% { transform: translateX(-50%) scale(1.1) rotate(2deg); }
+            100% { transform: translateX(-50%) scale(1.1) rotate(0deg); }
         }
 
         .rolodex-wrapper.blurred-background .card:not(.selected-card-active) {
@@ -1073,7 +1080,7 @@
             lastUpdated.textContent = new Date().toLocaleTimeString();
         }
 
-        showCopyMenu(caseData, cardElement) {
+        async showCopyMenu(caseData, cardElement) {
             // Remove existing menu
             this.dismissMenu();
 
@@ -1083,13 +1090,13 @@
             this.selectedCard = cardElement;
             this.selectedCaseData = caseData;
 
-            // Bring selected card to front-center position
-            this.bringCardToFront(cardElement);
-
-            // Add blur effect to background
+            // Add blur effect to background immediately
             document.querySelector('.rolodex-wrapper').classList.add('blurred-background');
 
-            // Create copy menu
+            // Bring selected card to front-center position (wait for animation)
+            await this.bringCardToFront(cardElement);
+
+            // Create copy menu after card is centered
             const menu = document.createElement('div');
             menu.className = 'copy-menu';
             menu.innerHTML = `
@@ -1101,7 +1108,7 @@
                 </div>
             `;
 
-            // Position menu near the card
+            // Position menu relative to the now-centered card
             const rect = cardElement.getBoundingClientRect();
             menu.style.position = 'fixed';
             menu.style.top = (rect.bottom + 10) + 'px';
@@ -1110,7 +1117,7 @@
 
             document.body.appendChild(menu);
 
-            // Add wiggle effect to selected card
+            // Add interactive wiggle effect (only on click/tap, not constant)
             cardElement.classList.add('selected-card-active');
 
             // No auto-dismiss - only selected card click dismisses
@@ -1138,22 +1145,48 @@
         }
 
         bringCardToFront(cardElement) {
-            // Calculate the rotation needed to bring this card to front-center (0 degrees)
-            const cards = document.querySelectorAll('.card');
-            const cardIndex = Array.from(cards).indexOf(cardElement);
-            const totalCards = cards.length;
+            return new Promise((resolve) => {
+                // Calculate the rotation needed to bring this card to front-center (0 degrees)
+                const cards = document.querySelectorAll('.card');
+                const cardIndex = Array.from(cards).indexOf(cardElement);
+                const totalCards = cards.length;
 
-            if (totalCards === 0) return;
+                if (totalCards === 0) {
+                    resolve();
+                    return;
+                }
 
-            // Calculate the angle this card is currently at
-            const currentCardAngle = (cardIndex / totalCards) * 360;
+                // Calculate the angle this card is currently at
+                const currentCardAngle = (cardIndex / totalCards) * 360;
 
-            // Calculate how much we need to rotate to bring it to 0 (front)
-            const rotationNeeded = -currentCardAngle;
+                // Calculate how much we need to rotate to bring it to 0 (front)
+                const rotationNeeded = -currentCardAngle;
 
-            // Apply the rotation to bring card to front
-            this.currentRotation = rotationNeeded;
-            this.updateRolodexRotation();
+                // Smooth animation to center
+                const startRotation = this.currentRotation;
+                const targetRotation = rotationNeeded;
+                const duration = 500; // 500ms animation
+                const startTime = Date.now();
+
+                const animate = () => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+
+                    // Easing function for smooth animation
+                    const easeOutCubic = 1 - Math.pow(1 - progress, 3);
+
+                    this.currentRotation = startRotation + (targetRotation - startRotation) * easeOutCubic;
+                    this.updateRolodexRotation();
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        resolve();
+                    }
+                };
+
+                requestAnimationFrame(animate);
+            });
         }
 
         copyToClipboard(text, label) {
