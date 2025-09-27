@@ -195,7 +195,6 @@
             transform-origin: center center;
             backface-visibility: hidden;
             left: 50%;
-            transform: translateX(-50%);
         }
 
         @media (max-width: 768px) and (orientation: portrait) {
@@ -204,8 +203,7 @@
                 max-width: 450px;
                 height: 63px;
                 padding: 0 13px;
-                margin-left: -42.5vw;
-                transform: none;
+                left: 50%;
             }
         }
 
@@ -216,7 +214,6 @@
                 height: 54px;
                 padding: 0 11px;
                 left: 50%;
-                transform: translateX(-50%);
             }
         }
 
@@ -620,7 +617,7 @@
                 const angle = (index / pageCases.length) * 360;
                 const radius = 150;
 
-                card.style.transform = `rotateX(${angle}deg) translateZ(${radius}px)`;
+                card.style.transform = `translateX(-50%) rotateX(${angle}deg) translateZ(${radius}px)`;
 
                 const title = case_.title;
                 const vsMatch = title.match(/^(.+?)\s+v\.?\s+(.+)$/i);
