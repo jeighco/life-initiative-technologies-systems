@@ -953,7 +953,13 @@
             let currentVelocity = this.velocity * -3.0; // Much stronger response to force
 
             const animate = () => {
-                currentVelocity *= friction;
+                // Gradual slowdown when locked, not hard stop - like varying friction
+                if (this.isRolodexLocked) {
+                    currentVelocity *= 0.85; // Faster deceleration but still smooth
+                } else {
+                    currentVelocity *= friction; // Normal friction
+                }
+
                 this.currentRotation += currentVelocity;
                 this.updateRolodexRotation();
 
@@ -1033,6 +1039,9 @@
             });
 
             rolodexWrapper.addEventListener('touchstart', (e) => {
+                // Immediate stop on touch - like a real spinner
+                this.velocity = 0;
+
                 if (this.isRolodexLocked) return; // Don't allow touch dragging when locked
                 this.isDragging = true;
                 this.startY = e.touches[0].clientY;
@@ -1164,6 +1173,9 @@
             // 5. Clear selected card reference
             this.selectedCard = null;
             this.selectedCaseData = null;
+
+            // DON'T reset velocity here - let natural momentum continue
+            this.isDragging = false;
 
             // 6. Fresh render fixes any positioning issues
             this.renderRolodex();
