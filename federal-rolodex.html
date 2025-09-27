@@ -546,6 +546,9 @@
             this.isDragging = false;
             this.startY = 0;
             this.startRotation = 0;
+            this.velocity = 0;
+            this.lastMoveTime = 0;
+            this.lastMoveY = 0;
             this.init();
         }
 
@@ -761,6 +764,26 @@
             rolodex.style.transform = `translate(-50%, -50%) rotateX(${this.currentRotation}deg)`;
         }
 
+        startMomentum() {
+            if (Math.abs(this.velocity) < 0.1) return; // Don't spin if too slow
+
+            const friction = 0.95; // How quickly it slows down
+            let currentVelocity = this.velocity * -0.8; // Convert to rotation
+
+            const animate = () => {
+                currentVelocity *= friction;
+                this.currentRotation += currentVelocity;
+                this.updateRolodexRotation();
+
+                // Continue if still moving fast enough
+                if (Math.abs(currentVelocity) > 0.1) {
+                    requestAnimationFrame(animate);
+                }
+            };
+
+            requestAnimationFrame(animate);
+        }
+
         setupControls() {
             const prevBtn = document.getElementById('prev-btn');
             const nextBtn = document.getElementById('next-btn');
@@ -804,12 +827,26 @@
                 e.preventDefault();
                 e.stopPropagation();
                 const deltaY = e.clientY - this.startY;
+                const currentTime = Date.now();
+
+                // Calculate velocity for momentum
+                if (this.lastMoveTime) {
+                    const timeDiff = currentTime - this.lastMoveTime;
+                    const yDiff = e.clientY - this.lastMoveY;
+                    this.velocity = yDiff / timeDiff;
+                }
+
+                this.lastMoveTime = currentTime;
+                this.lastMoveY = e.clientY;
                 this.currentRotation = this.startRotation - (deltaY * 0.8);
                 this.updateRolodexRotation();
             });
 
             document.addEventListener('mouseup', () => {
-                this.isDragging = false;
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    this.startMomentum();
+                }
             });
 
             rolodexWrapper.addEventListener('touchstart', (e) => {
@@ -826,12 +863,26 @@
                 e.preventDefault();
                 e.stopPropagation();
                 const deltaY = e.touches[0].clientY - this.startY;
+                const currentTime = Date.now();
+
+                // Calculate velocity for momentum
+                if (this.lastMoveTime) {
+                    const timeDiff = currentTime - this.lastMoveTime;
+                    const yDiff = e.touches[0].clientY - this.lastMoveY;
+                    this.velocity = yDiff / timeDiff;
+                }
+
+                this.lastMoveTime = currentTime;
+                this.lastMoveY = e.touches[0].clientY;
                 this.currentRotation = this.startRotation - (deltaY * 0.8);
                 this.updateRolodexRotation();
             }, { passive: false });
 
             document.addEventListener('touchend', () => {
-                this.isDragging = false;
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    this.startMomentum();
+                }
             });
 
             rolodexWrapper.addEventListener('wheel', (e) => {
