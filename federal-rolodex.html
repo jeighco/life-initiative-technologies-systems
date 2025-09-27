@@ -262,8 +262,8 @@
             }
         }
 
-        /* DEBUG: Super broad landscape rule */
-        @media (orientation: landscape) {
+        /* Mobile landscape only - exclude desktop */
+        @media (max-width: 1024px) and (orientation: landscape) {
             .card {
                 width: 180px !important;
                 max-width: 180px !important;
@@ -271,8 +271,7 @@
                 padding: 0 4px !important;
                 left: 50% !important;
                 transform: translateX(-50%) !important;
-                background: red !important; /* DEBUG */
-                border: 3px solid yellow !important; /* Even more obvious */
+                background: green !important; /* Change to green, remove border */
             }
         }
 
