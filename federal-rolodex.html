@@ -255,6 +255,7 @@
                 height: 63px;
                 padding: 0 13px;
                 left: 50%;
+                transform: translateX(-50%);
             }
         }
 
@@ -265,6 +266,7 @@
                 height: 54px;
                 padding: 0 11px;
                 left: 50%;
+                transform: translateX(-50%);
             }
         }
 
@@ -668,12 +670,8 @@
                 const angle = (index / pageCases.length) * 360;
                 const radius = 150;
 
-                // Check if desktop (1025px+) to apply correct transform
-                if (window.innerWidth >= 1025) {
-                    card.style.transform = `translateX(-50%) rotateX(${angle}deg) translateZ(${radius}px)`;
-                } else {
-                    card.style.transform = `rotateX(${angle}deg) translateZ(${radius}px)`;
-                }
+                // Apply translateX(-50%) for all screen sizes since CSS handles it
+                card.style.transform = `translateX(-50%) rotateX(${angle}deg) translateZ(${radius}px)`;
 
                 const title = case_.title;
                 const vsMatch = title.match(/^(.+?)\s+v\.?\s+(.+)$/i);
