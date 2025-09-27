@@ -43,18 +43,8 @@
             }
         }
 
-        /* Desktop - Normal width screens (1025px - 1440px) */
-        @media (min-width: 1025px) and (max-width: 1440px) {
-            .card {
-                left: 50%;
-                margin-left: -35vw;
-                width: 70vw;
-                max-width: 600px;
-            }
-        }
-
-        /* Ultra-wide desktop fix */
-        @media (min-width: 1600px) {
+        /* Desktop - Lock positioning and sizing at 1200px+ */
+        @media (min-width: 1200px) {
             .rolodex-wrapper {
                 max-width: 700px;
                 margin: 0 auto;
@@ -65,13 +55,23 @@
                 margin-left: -300px;
                 width: 600px;
                 max-width: 600px;
+                min-width: 600px;
             }
 
             .case-title {
-                max-width: 450px;
+                font-size: 16px !important;
+                max-width: 450px !important;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
+            }
+
+            .case-number {
+                font-size: 14px !important;
+            }
+
+            .case-meta {
+                font-size: 12px !important;
             }
         }
 
