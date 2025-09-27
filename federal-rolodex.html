@@ -577,7 +577,7 @@
                         url: case_.pacer_url
                     }));
 
-                    const partyCases = data.all_results.party_watchlist_cases.map(case_ => ({
+                    const partyCases = data.all_results.party_cases.map(case_ => ({
                         id: case_.case_number,
                         title: case_.case_title,
                         court: case_.court_name || 'Unknown Court',
