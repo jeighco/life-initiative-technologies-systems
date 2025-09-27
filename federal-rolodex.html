@@ -765,10 +765,10 @@
         }
 
         startMomentum() {
-            if (Math.abs(this.velocity) < 0.1) return; // Don't spin if too slow
+            if (Math.abs(this.velocity) < 0.01) return; // Much lower threshold
 
-            const friction = 0.95; // How quickly it slows down
-            let currentVelocity = this.velocity * -0.8; // Convert to rotation
+            const friction = 0.98; // Less friction = spins longer
+            let currentVelocity = this.velocity * -3.0; // Much stronger response to force
 
             const animate = () => {
                 currentVelocity *= friction;
@@ -776,7 +776,7 @@
                 this.updateRolodexRotation();
 
                 // Continue if still moving fast enough
-                if (Math.abs(currentVelocity) > 0.1) {
+                if (Math.abs(currentVelocity) > 0.01) {
                     requestAnimationFrame(animate);
                 }
             };
