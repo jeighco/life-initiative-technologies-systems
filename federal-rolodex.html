@@ -43,35 +43,47 @@
             }
         }
 
-        /* Desktop - Lock positioning and sizing at 1200px+ */
-        @media (min-width: 1200px) {
-            .rolodex-wrapper {
-                max-width: 700px;
-                margin: 0 auto;
+        /* Desktop ONLY - Fixes positioning without affecting mobile */
+        @media (min-width: 1025px) {
+            .container {
+                flex-direction: row;
+                justify-content: center;
+                align-items: flex-start;
+                padding: 20px;
+                gap: 40px;
+            }
+
+            .rolodex-container {
+                flex: 1;
+                max-width: 600px;
+                margin-left: 0;
+                margin-right: 40px;
             }
 
             .card {
                 left: 50%;
-                margin-left: -300px;
-                width: 600px;
-                max-width: 600px;
-                min-width: 600px;
+                transform: translateX(-50%);
+                width: 500px;
+                max-width: 500px;
+                margin-left: 0;
             }
 
-            .case-title {
-                font-size: 16px !important;
-                max-width: 450px !important;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
+            .new-cases-container {
+                flex: 0 0 400px;
+                max-width: 400px;
+            }
+        }
+
+        /* Ultra-wide desktop - Prevents stretching */
+        @media (min-width: 1600px) {
+            .container {
+                max-width: 1400px;
+                margin: 0 auto;
             }
 
-            .case-number {
-                font-size: 14px !important;
-            }
-
-            .case-meta {
-                font-size: 12px !important;
+            .card {
+                width: 500px;
+                transform: translateX(-50%);
             }
         }
 
@@ -649,7 +661,12 @@
                 const angle = (index / pageCases.length) * 360;
                 const radius = 150;
 
-                card.style.transform = `translateX(-50%) rotateX(${angle}deg) translateZ(${radius}px)`;
+                // Check if desktop (1025px+) to apply correct transform
+                if (window.innerWidth >= 1025) {
+                    card.style.transform = `translateX(-50%) rotateX(${angle}deg) translateZ(${radius}px)`;
+                } else {
+                    card.style.transform = `rotateX(${angle}deg) translateZ(${radius}px)`;
+                }
 
                 const title = case_.title;
                 const vsMatch = title.match(/^(.+?)\s+v\.?\s+(.+)$/i);
