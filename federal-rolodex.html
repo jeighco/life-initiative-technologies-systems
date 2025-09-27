@@ -504,12 +504,13 @@
             z-index: 100 !important;
         }
 
-        .copy-popup {
+        .copy-menu {
             background: rgba(0, 20, 0, 0.95);
             border: 1px solid #00ff00;
             border-radius: 8px;
             padding: 10px;
             z-index: 1000;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
         }
 
         .copy-buttons button {
@@ -797,21 +798,53 @@
                     </div>
                 `;
 
+                // Long-press for mobile
+                let longPressTimer;
+                let longPressTriggered = false;
+
+                // Single click - open URL directly
                 card.addEventListener('click', (e) => {
+                    if (this.isCardSelected) return; // Ignore if menu is open
+                    if (longPressTriggered) return; // Ignore if long-press was triggered
+
                     e.preventDefault();
                     e.stopPropagation();
 
-                    if (this.selectedCardId === case_.id && this.isCardSelected) {
-                        // Second click - open URL
-                        if (case_.url && case_.url !== '#') {
-                            window.open(case_.url, '_blank');
-                        } else {
-                            alert('No PACER URL available for this case');
-                        }
+                    if (case_.url && case_.url !== '#') {
+                        window.open(case_.url, '_blank');
                     } else {
-                        // First click - select card and show popup
-                        this.selectCard(case_, card);
+                        alert('No PACER URL available for this case');
                     }
+                });
+
+                // Right-click - show copy menu
+                card.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    this.showCopyMenu(case_, card);
+                });
+
+                card.addEventListener('touchstart', (e) => {
+                    longPressTriggered = false;
+                    longPressTimer = setTimeout(() => {
+                        longPressTriggered = true;
+                        this.showCopyMenu(case_, card);
+                        e.preventDefault();
+                    }, 500);
+                });
+
+                card.addEventListener('touchend', (e) => {
+                    clearTimeout(longPressTimer);
+
+                    // If long-press was triggered, prevent the click event
+                    if (longPressTriggered) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                });
+
+                card.addEventListener('touchmove', () => {
+                    // Cancel long-press if user moves finger
+                    clearTimeout(longPressTimer);
                 });
 
             this.updateRolodexRotation();
@@ -986,6 +1019,16 @@
                 this.currentRotation += e.deltaY * 0.15;
                 this.updateRolodexRotation();
             }, { passive: false });
+
+            // Click-away to dismiss copy menu
+            document.addEventListener('click', (e) => {
+                // Don't dismiss if clicking on the menu itself or its buttons
+                if (e.target.closest('.copy-menu')) return;
+                // Don't dismiss if clicking on a card (which might be triggering context menu)
+                if (e.target.closest('.card')) return;
+
+                this.dismissMenu();
+            });
         }
 
         updateStats() {
@@ -996,47 +1039,46 @@
             lastUpdated.textContent = new Date().toLocaleTimeString();
         }
 
-        selectCard(caseData, cardElement) {
-            // Clear previous selection
-            document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+        showCopyMenu(caseData, cardElement) {
+            // Remove existing menu
+            this.dismissMenu();
 
-            // Mark this card as selected
-            cardElement.classList.add('selected');
-            this.selectedCardId = caseData.id;
+            // Mark that menu is open
             this.isCardSelected = true;
 
-            // Show copy popup
-            this.showCopyPopup(caseData, cardElement);
-        }
-
-        showCopyPopup(caseData, cardElement) {
-            // Remove existing popup
-            const existingPopup = document.querySelector('.copy-popup');
-            if (existingPopup) existingPopup.remove();
-
-            // Create popup
-            const popup = document.createElement('div');
-            popup.className = 'copy-popup';
-            popup.innerHTML = `
+            // Create copy menu
+            const menu = document.createElement('div');
+            menu.className = 'copy-menu';
+            menu.innerHTML = `
                 <div class="copy-buttons">
                     <button onclick="rolodex.copyToClipboard('${caseData.id}', 'Case Number')">Copy Case #</button>
                     <button onclick="rolodex.copyToClipboard('${caseData.title.replace(/'/g, "\\'")}', 'Case Title')">Copy Title</button>
                     <button onclick="rolodex.copyToClipboard('${caseData.court}', 'Court')">Copy Court</button>
+                    <button onclick="window.open('${caseData.url}', '_blank')">Open PACER</button>
                 </div>
             `;
 
-            // Position popup near the card
+            // Position menu near the card
             const rect = cardElement.getBoundingClientRect();
-            popup.style.position = 'fixed';
-            popup.style.top = (rect.bottom + 10) + 'px';
-            popup.style.left = Math.max(10, rect.left) + 'px';
+            menu.style.position = 'fixed';
+            menu.style.top = (rect.bottom + 10) + 'px';
+            menu.style.left = Math.max(10, rect.left) + 'px';
+            menu.style.zIndex = '1000';
 
-            document.body.appendChild(popup);
+            document.body.appendChild(menu);
 
-            // Auto-hide after 5 seconds
+            // Auto-hide after 8 seconds
             setTimeout(() => {
-                if (popup.parentNode) popup.remove();
-            }, 5000);
+                this.dismissMenu();
+            }, 8000);
+        }
+
+        dismissMenu() {
+            const existingMenu = document.querySelector('.copy-menu');
+            if (existingMenu) {
+                existingMenu.remove();
+            }
+            this.isCardSelected = false;
         }
 
         copyToClipboard(text, label) {
