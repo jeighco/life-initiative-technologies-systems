@@ -542,6 +542,8 @@
             this.currentPage = 0;
             this.casesPerPage = 9;
             this.totalPages = 0;
+            this.selectedCardId = null;
+            this.isCardSelected = false;
             this.currentRotation = 0;
             this.isDragging = false;
             this.startY = 0;
@@ -748,15 +750,17 @@
                 card.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (case_.url && case_.url !== '#') {
-                        window.open(case_.url, '_blank');
+    
+                    if (this.selectedCardId === case_.id && this.isCardSelected) {
+                        if (case_.url && case_.url !== '#') {
+                            window.open(case_.url, '_blank');
+                        } else {
+                            alert('No PACER URL available for this case');
+                        }
                     } else {
-                        alert('No PACER URL available for this case');
+                        this.selectCard(case_, card);
                     }
                 });
-
-                rolodex.appendChild(card);
-            });
 
             this.updateRolodexRotation();
         }
