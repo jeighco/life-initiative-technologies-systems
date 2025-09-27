@@ -566,14 +566,28 @@
                 const response = await fetch('./enhanced_federal_report.json');
                 if (response.ok) {
                     const data = await response.json();
-                    this.allCases = data.all_results.regular_cases.map(case_ => ({
+
+                    // Combine regular cases and party watchlist cases
+                    const regularCases = data.all_results.regular_cases.map(case_ => ({
                         id: case_.case_number,
                         title: case_.case_title,
-                        court: case_.court_name,
+                        court: case_.court_name || 'Unknown Court',
                         filed_date: case_.filed_date,
                         case_type: case_.case_type.toUpperCase(),
                         url: case_.pacer_url
                     }));
+
+                    const partyCases = data.all_results.party_watchlist_cases.map(case_ => ({
+                        id: case_.case_number,
+                        title: case_.case_title,
+                        court: case_.court_name || 'Unknown Court',
+                        filed_date: case_.filed_date,
+                        case_type: case_.case_type.toUpperCase(),
+                        url: case_.pacer_url
+                    }));
+
+                    // Combine all cases
+                    this.allCases = [...regularCases, ...partyCases];
                     this.newCases = this.getRecentCases();
                 } else {
                     console.log('Could not load enhanced_federal_report.json, using demo data');
