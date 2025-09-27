@@ -561,9 +561,30 @@
         }
 
         async loadCases() {
-            console.log('Loading federal case data directly');
-            this.allCases = this.getFederalCaseData();
-            this.newCases = this.getRecentCases();
+            try {
+                console.log('Loading federal case data from enhanced_federal_report.json');
+                const response = await fetch('../coding-projects/baynet-news-system/Shared/Data/enhanced_federal_report.json');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.allCases = data.all_results.regular_cases.map(case_ => ({
+                        id: case_.case_number,
+                        title: case_.case_title,
+                        court: case_.court_name,
+                        filed_date: case_.filed_date,
+                        case_type: case_.case_type.toUpperCase(),
+                        url: case_.pacer_url
+                    }));
+                    this.newCases = this.getRecentCases();
+                } else {
+                    console.log('Could not load enhanced_federal_report.json, using demo data');
+                    this.allCases = this.getFederalCaseData();
+                    this.newCases = this.getRecentCases();
+                }
+            } catch (error) {
+                console.log('Error loading federal case data:', error);
+                this.allCases = this.getFederalCaseData();
+                this.newCases = this.getRecentCases();
+            }
 
             this.totalPages = Math.ceil(this.allCases.length / this.casesPerPage);
             this.renderInterface();
