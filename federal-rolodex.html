@@ -43,12 +43,27 @@
             }
         }
 
-        /* Desktop card positioning fix */
-        @media (min-width: 1025px) {
+        /* Desktop - Normal width screens (1025px - 1440px) */
+        @media (min-width: 1025px) and (max-width: 1440px) {
             .card {
                 left: 50%;
                 margin-left: -35vw;
                 width: 70vw;
+                max-width: 600px;
+            }
+        }
+
+        /* Ultra-wide screens (1441px and above) */
+        @media (min-width: 1441px) {
+            .rolodex-container {
+                max-width: 800px;
+                margin: 0 auto;
+            }
+
+            .card {
+                left: 50%;
+                margin-left: -300px;
+                width: 600px;
                 max-width: 600px;
             }
         }
