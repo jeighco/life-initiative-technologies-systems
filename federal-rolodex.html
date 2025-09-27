@@ -924,7 +924,7 @@
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
-                this.currentRotation -= e.deltaY * 0.15;
+                this.currentRotation += e.deltaY * 0.15;
                 this.updateRolodexRotation();
             }, { passive: false });
         }
