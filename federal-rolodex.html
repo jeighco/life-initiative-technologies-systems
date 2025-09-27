@@ -497,6 +497,53 @@
                 opacity: 0;
             }
         }
+
+        .card.selected {
+            transform: translateX(-50%) scale(1.1) !important;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.8) !important;
+            z-index: 100 !important;
+        }
+
+        .copy-popup {
+            background: rgba(0, 20, 0, 0.95);
+            border: 1px solid #00ff00;
+            border-radius: 8px;
+            padding: 10px;
+            z-index: 1000;
+        }
+
+        .copy-buttons button {
+            background: rgba(0, 255, 0, 0.2);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .copy-buttons button:hover {
+            background: rgba(0, 255, 0, 0.3);
+        }
+
+        .copy-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 255, 0, 0.9);
+            color: black;
+            padding: 10px 15px;
+            border-radius: 5px;
+            z-index: 2000;
+            font-family: 'Courier New', monospace;
+            transition: opacity 0.3s;
+        }
+
+        .copy-notification.fade-out {
+            opacity: 0;
+        }
     </style>
 </head>
 <body>
@@ -551,7 +598,10 @@
             this.velocity = 0;
             this.lastMoveTime = 0;
             this.lastMoveY = 0;
+            this.selectedCardId = null;
+            this.isCardSelected = false;
             this.init();
+            window.rolodex = this; // Make accessible for popup buttons
         }
 
         async init() {
@@ -750,14 +800,16 @@
                 card.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-    
+
                     if (this.selectedCardId === case_.id && this.isCardSelected) {
+                        // Second click - open URL
                         if (case_.url && case_.url !== '#') {
                             window.open(case_.url, '_blank');
                         } else {
                             alert('No PACER URL available for this case');
                         }
                     } else {
+                        // First click - select card and show popup
                         this.selectCard(case_, card);
                     }
                 });
@@ -942,6 +994,67 @@
 
             caseCount.textContent = this.allCases.length;
             lastUpdated.textContent = new Date().toLocaleTimeString();
+        }
+
+        selectCard(caseData, cardElement) {
+            // Clear previous selection
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+
+            // Mark this card as selected
+            cardElement.classList.add('selected');
+            this.selectedCardId = caseData.id;
+            this.isCardSelected = true;
+
+            // Show copy popup
+            this.showCopyPopup(caseData, cardElement);
+        }
+
+        showCopyPopup(caseData, cardElement) {
+            // Remove existing popup
+            const existingPopup = document.querySelector('.copy-popup');
+            if (existingPopup) existingPopup.remove();
+
+            // Create popup
+            const popup = document.createElement('div');
+            popup.className = 'copy-popup';
+            popup.innerHTML = `
+                <div class="copy-buttons">
+                    <button onclick="rolodex.copyToClipboard('${caseData.id}', 'Case Number')">Copy Case #</button>
+                    <button onclick="rolodex.copyToClipboard('${caseData.title.replace(/'/g, "\\'")}', 'Case Title')">Copy Title</button>
+                    <button onclick="rolodex.copyToClipboard('${caseData.court}', 'Court')">Copy Court</button>
+                </div>
+            `;
+
+            // Position popup near the card
+            const rect = cardElement.getBoundingClientRect();
+            popup.style.position = 'fixed';
+            popup.style.top = (rect.bottom + 10) + 'px';
+            popup.style.left = Math.max(10, rect.left) + 'px';
+
+            document.body.appendChild(popup);
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                if (popup.parentNode) popup.remove();
+            }, 5000);
+        }
+
+        copyToClipboard(text, label) {
+            navigator.clipboard.writeText(text).then(() => {
+                this.showNotification(`${label} copied to clipboard`);
+            });
+        }
+
+        showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'copy-notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.classList.add('fade-out');
+                setTimeout(() => notification.remove(), 300);
+            }, 2000);
         }
 
         setupMatrixBackground() {
