@@ -546,34 +546,57 @@
             opacity: 0;
         }
 
-        /* Modal UX styles */
-        .blurred-background {
-            filter: blur(2px);
-            opacity: 0.7;
+        /* Bootstrap Modal + Swiper.js inspired patterns */
+
+        /* Modal backdrop blur - Bootstrap 5 pattern */
+        .modal-backdrop-active {
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
             transition: all 0.3s ease;
         }
 
-        .selected-card-active {
-            transform: translateX(-50%) scale(1.1) !important;
-            box-shadow: 0 0 30px rgba(0, 255, 0, 0.9) !important;
+        /* Content blur fallback - Bootstrap 3/4 pattern */
+        body.modal-open > :not(.modal-content) {
+            -webkit-filter: blur(2px);
+            -moz-filter: blur(2px);
+            -o-filter: blur(2px);
+            -ms-filter: blur(2px);
+            filter: blur(2px);
+            transition: filter 0.3s ease;
+        }
+
+        /* Swiper.js active slide pattern */
+        .card {
+            transform: translateX(-50%) scale(0.85);
+            transition: transform 0.5s ease, opacity 0.3s ease;
+            opacity: 0.6;
+        }
+
+        .card.swiper-slide-active {
+            transform: translateX(-50%) scale(1.05) !important;
+            opacity: 1 !important;
             z-index: 100 !important;
-            transition: transform 0.1s ease;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.8) !important;
         }
 
-        .selected-card-active:hover,
-        .selected-card-active:active {
-            animation: wiggle 0.3s ease-in-out;
+        /* 3D carousel centering transition - KristofPusztai pattern */
+        .rolodex {
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
-        @keyframes wiggle {
-            0% { transform: translateX(-50%) scale(1.1) rotate(0deg); }
-            25% { transform: translateX(-50%) scale(1.1) rotate(-2deg); }
-            75% { transform: translateX(-50%) scale(1.1) rotate(2deg); }
-            100% { transform: translateX(-50%) scale(1.1) rotate(0deg); }
+        /* Modal state lock */
+        .modal-open .rolodex {
+            pointer-events: none;
         }
 
-        .rolodex-wrapper.blurred-background .card:not(.selected-card-active) {
-            opacity: 0.4;
+        .modal-open .card.swiper-slide-active {
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        /* Interactive hover effect */
+        .card.swiper-slide-active:hover {
+            transform: translateX(-50%) scale(1.08) !important;
         }
     </style>
 </head>
@@ -1084,21 +1107,26 @@
             // Remove existing menu
             this.dismissMenu();
 
-            // Lock rolodex rotation
+            // Lock rolodex using Bootstrap modal pattern
             this.isRolodexLocked = true;
             this.isCardSelected = true;
             this.selectedCard = cardElement;
             this.selectedCaseData = caseData;
 
-            // Add blur effect to background immediately
-            document.querySelector('.rolodex-wrapper').classList.add('blurred-background');
+            // Apply modal state classes (Bootstrap pattern)
+            document.body.classList.add('modal-open');
+            document.querySelector('.rolodex-wrapper').classList.add('modal-backdrop-active');
 
-            // Bring selected card to front-center position (wait for animation)
-            await this.bringCardToFront(cardElement);
+            // Center card using Swiper.js pattern
+            await this.centerSelectedCard(cardElement);
+
+            // Mark as active slide (Swiper pattern)
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('swiper-slide-active'));
+            cardElement.classList.add('swiper-slide-active');
 
             // Create copy menu after card is centered
             const menu = document.createElement('div');
-            menu.className = 'copy-menu';
+            menu.className = 'copy-menu modal-content';
             menu.innerHTML = `
                 <div class="copy-buttons">
                     <button onclick="rolodex.copyToClipboard('${caseData.id}', 'Case Number')">Copy Case #</button>
@@ -1108,7 +1136,7 @@
                 </div>
             `;
 
-            // Position menu relative to the now-centered card
+            // Position menu relative to centered card
             const rect = cardElement.getBoundingClientRect();
             menu.style.position = 'fixed';
             menu.style.top = (rect.bottom + 10) + 'px';
@@ -1116,11 +1144,6 @@
             menu.style.zIndex = '1000';
 
             document.body.appendChild(menu);
-
-            // Add interactive wiggle effect (only on click/tap, not constant)
-            cardElement.classList.add('selected-card-active');
-
-            // No auto-dismiss - only selected card click dismisses
         }
 
         dismissMenu() {
@@ -1133,20 +1156,21 @@
             this.isRolodexLocked = false;
             this.isCardSelected = false;
 
-            // Remove blur effect
-            document.querySelector('.rolodex-wrapper').classList.remove('blurred-background');
+            // Remove modal state classes (Bootstrap pattern)
+            document.body.classList.remove('modal-open');
+            document.querySelector('.rolodex-wrapper').classList.remove('modal-backdrop-active');
 
-            // Remove wiggle effect from selected card
+            // Remove active slide state (Swiper pattern)
             if (this.selectedCard) {
-                this.selectedCard.classList.remove('selected-card-active');
+                this.selectedCard.classList.remove('swiper-slide-active');
                 this.selectedCard = null;
                 this.selectedCaseData = null;
             }
         }
 
-        bringCardToFront(cardElement) {
+        centerSelectedCard(cardElement) {
             return new Promise((resolve) => {
-                // Calculate the rotation needed to bring this card to front-center (0 degrees)
+                // Calculate rotation to center this card (industry standard pattern)
                 const cards = document.querySelectorAll('.card');
                 const cardIndex = Array.from(cards).indexOf(cardElement);
                 const totalCards = cards.length;
@@ -1156,36 +1180,17 @@
                     return;
                 }
 
-                // Calculate the angle this card is currently at
+                // Calculate the angle this card is at
                 const currentCardAngle = (cardIndex / totalCards) * 360;
+                // Center it at 0 degrees (front)
+                const targetRotation = -currentCardAngle;
 
-                // Calculate how much we need to rotate to bring it to 0 (front)
-                const rotationNeeded = -currentCardAngle;
+                // Apply rotation instantly - CSS transition handles the smoothness
+                this.currentRotation = targetRotation;
+                this.updateRolodexRotation();
 
-                // Smooth animation to center
-                const startRotation = this.currentRotation;
-                const targetRotation = rotationNeeded;
-                const duration = 500; // 500ms animation
-                const startTime = Date.now();
-
-                const animate = () => {
-                    const elapsed = Date.now() - startTime;
-                    const progress = Math.min(elapsed / duration, 1);
-
-                    // Easing function for smooth animation
-                    const easeOutCubic = 1 - Math.pow(1 - progress, 3);
-
-                    this.currentRotation = startRotation + (targetRotation - startRotation) * easeOutCubic;
-                    this.updateRolodexRotation();
-
-                    if (progress < 1) {
-                        requestAnimationFrame(animate);
-                    } else {
-                        resolve();
-                    }
-                };
-
-                requestAnimationFrame(animate);
+                // Wait for CSS transition to complete (0.5s as defined in CSS)
+                setTimeout(resolve, 500);
             });
         }
 
