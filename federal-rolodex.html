@@ -1089,7 +1089,7 @@
             lastUpdated.textContent = new Date().toLocaleTimeString();
         }
 
-        async showCopyMenu(caseData, cardElement) {
+        showCopyMenu(caseData, cardElement) {
             // Clean up first
             this.dismissMenu();
 
@@ -1099,14 +1099,23 @@
             this.selectedCard = cardElement;
             this.selectedCaseData = caseData;
 
-            // Add class to rolodex wrapper only (targeted approach)
+            // 1. REMOVE the card from 3D space entirely (stable overlay pattern)
+            cardElement.style.transform = 'translateX(-50%) translateY(-50%) scale(1.1)';
+            cardElement.style.position = 'fixed';
+            cardElement.style.top = '40%';
+            cardElement.style.left = '50%';
+            cardElement.style.zIndex = '1000';
+
+            // 2. Hide other cards (blur background)
             document.querySelector('.rolodex-wrapper').classList.add('rolodex-locked');
-            cardElement.classList.add('selected');
+            document.querySelectorAll('.card').forEach(c => {
+                if (c !== cardElement) {
+                    c.style.opacity = '0.3';
+                    c.style.filter = 'blur(2px)';
+                }
+            });
 
-            // Center the selected card
-            await this.centerSelectedCard(cardElement);
-
-            // Create copy menu with proper cleanup
+            // 3. Create copy menu
             const menu = document.createElement('div');
             menu.className = 'copy-menu';
             menu.innerHTML = `
@@ -1114,37 +1123,50 @@
                     <button onclick="rolodex.copyToClipboard('${caseData.id}', 'Case Number')">Copy Case #</button>
                     <button onclick="rolodex.copyToClipboard('${caseData.title.replace(/'/g, "\\'")}', 'Case Title')">Copy Title</button>
                     <button onclick="rolodex.copyToClipboard('${caseData.court}', 'Court')">Copy Court</button>
-                    <button onclick="window.open('${caseData.url}', '_blank')">Open PACER</button>
+                    <button onclick="window.open('${caseData.url}', '_blank'); rolodex.dismissMenu();">Open PACER</button>
                 </div>
             `;
 
-            // Position menu relative to centered card
-            const rect = cardElement.getBoundingClientRect();
+            // Position menu below the centered card
             menu.style.position = 'fixed';
-            menu.style.top = (rect.bottom + 10) + 'px';
-            menu.style.left = Math.max(10, rect.left) + 'px';
-            menu.style.zIndex = '1000';
+            menu.style.top = '55%';
+            menu.style.left = '50%';
+            menu.style.transform = 'translateX(-50%)';
+            menu.style.zIndex = '1001';
 
             document.body.appendChild(menu);
         }
 
         dismissMenu() {
-            // Clean up all menus
-            document.querySelectorAll('.copy-menu').forEach(m => m.remove());
+            // 1. Restore card to rolodex (remove from overlay)
+            if (this.selectedCard) {
+                this.selectedCard.style.transform = '';
+                this.selectedCard.style.position = '';
+                this.selectedCard.style.top = '';
+                this.selectedCard.style.left = '';
+                this.selectedCard.style.zIndex = '';
+            }
 
-            // Unlock rolodex rotation
+            // 2. Show other cards (restore normal appearance)
+            document.querySelectorAll('.card').forEach(c => {
+                c.style.opacity = '1';
+                c.style.filter = '';
+            });
+
+            // 3. Remove menu and unlock rolodex
+            document.querySelectorAll('.copy-menu').forEach(m => m.remove());
+            document.querySelector('.rolodex-wrapper').classList.remove('rolodex-locked');
+
+            // 4. Unlock rolodex rotation
             this.isRolodexLocked = false;
             this.isCardSelected = false;
 
-            // Remove targeted lock class
-            document.querySelector('.rolodex-wrapper').classList.remove('rolodex-locked');
-
-            // Remove selected state from all cards
-            document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
-
-            // Clear selected card reference
+            // 5. Clear selected card reference
             this.selectedCard = null;
             this.selectedCaseData = null;
+
+            // 6. Fresh render fixes any positioning issues
+            this.renderRolodex();
         }
 
         centerSelectedCard(cardElement) {
@@ -1176,6 +1198,7 @@
         copyToClipboard(text, label) {
             navigator.clipboard.writeText(text).then(() => {
                 this.showNotification(`${label} copied to clipboard`);
+                this.dismissMenu(); // Close menu after action
             });
         }
 
