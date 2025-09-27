@@ -682,9 +682,9 @@
                 const angle = (index / pageCases.length) * 360;
                 let radius = 150;
 
-                // Tighter radius for landscape mobile
+                // Adjusted radius for landscape mobile
                 if (window.innerHeight <= 500 && window.orientation !== undefined) {
-                    radius = 80;
+                    radius = 120;
                 }
 
                 // Apply translateX(-50%) for all screen sizes since CSS handles it
