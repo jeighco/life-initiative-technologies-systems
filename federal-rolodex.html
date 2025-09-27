@@ -546,57 +546,43 @@
             opacity: 0;
         }
 
-        /* Bootstrap Modal + Swiper.js inspired patterns */
+        /* Targeted modal patterns - ONLY blur non-selected rolodex cards */
 
-        /* Modal backdrop blur - Bootstrap 5 pattern */
-        .modal-backdrop-active {
-            -webkit-backdrop-filter: blur(4px);
-            backdrop-filter: blur(4px);
-            transition: all 0.3s ease;
-        }
-
-        /* Content blur fallback - Bootstrap 3/4 pattern */
-        body.modal-open > :not(.modal-content) {
-            -webkit-filter: blur(2px);
-            -moz-filter: blur(2px);
-            -o-filter: blur(2px);
-            -ms-filter: blur(2px);
-            filter: blur(2px);
-            transition: filter 0.3s ease;
-        }
-
-        /* Swiper.js active slide pattern */
+        /* Keep normal card sizing unless selected */
         .card {
-            transform: translateX(-50%) scale(0.85);
-            transition: transform 0.5s ease, opacity 0.3s ease;
-            opacity: 0.6;
+            transform: translateX(-50%);
+            opacity: 1;
+            transition: transform 0.5s ease, opacity 0.3s ease, filter 0.3s ease;
         }
 
-        .card.swiper-slide-active {
-            transform: translateX(-50%) scale(1.05) !important;
+        /* ONLY blur the rolodex background cards, NOT the selected card or other elements */
+        .rolodex-locked .rolodex .card:not(.selected) {
+            filter: blur(2px);
+            opacity: 0.3;
+        }
+
+        /* Selected card stays sharp and prominent */
+        .card.selected {
+            transform: translateX(-50%) scale(1.1);
+            z-index: 1000;
+            filter: none !important;
             opacity: 1 !important;
-            z-index: 100 !important;
-            box-shadow: 0 0 30px rgba(0, 255, 0, 0.8) !important;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.8);
         }
 
-        /* 3D carousel centering transition - KristofPusztai pattern */
+        /* 3D carousel smooth transitions */
         .rolodex {
             transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
-        /* Modal state lock */
-        .modal-open .rolodex {
+        /* Modal state lock - disable rolodex interactions only */
+        .rolodex-locked .rolodex {
             pointer-events: none;
         }
 
-        .modal-open .card.swiper-slide-active {
+        .rolodex-locked .card.selected {
             pointer-events: auto;
             cursor: pointer;
-        }
-
-        /* Interactive hover effect */
-        .card.swiper-slide-active:hover {
-            transform: translateX(-50%) scale(1.08) !important;
         }
     </style>
 </head>
@@ -1104,29 +1090,25 @@
         }
 
         async showCopyMenu(caseData, cardElement) {
-            // Remove existing menu
+            // Clean up first
             this.dismissMenu();
 
-            // Lock rolodex using Bootstrap modal pattern
+            // Lock rolodex and set state
             this.isRolodexLocked = true;
             this.isCardSelected = true;
             this.selectedCard = cardElement;
             this.selectedCaseData = caseData;
 
-            // Apply modal state classes (Bootstrap pattern)
-            document.body.classList.add('modal-open');
-            document.querySelector('.rolodex-wrapper').classList.add('modal-backdrop-active');
+            // Add class to rolodex wrapper only (targeted approach)
+            document.querySelector('.rolodex-wrapper').classList.add('rolodex-locked');
+            cardElement.classList.add('selected');
 
-            // Center card using Swiper.js pattern
+            // Center the selected card
             await this.centerSelectedCard(cardElement);
 
-            // Mark as active slide (Swiper pattern)
-            document.querySelectorAll('.card').forEach(c => c.classList.remove('swiper-slide-active'));
-            cardElement.classList.add('swiper-slide-active');
-
-            // Create copy menu after card is centered
+            // Create copy menu with proper cleanup
             const menu = document.createElement('div');
-            menu.className = 'copy-menu modal-content';
+            menu.className = 'copy-menu';
             menu.innerHTML = `
                 <div class="copy-buttons">
                     <button onclick="rolodex.copyToClipboard('${caseData.id}', 'Case Number')">Copy Case #</button>
@@ -1147,25 +1129,22 @@
         }
 
         dismissMenu() {
-            const existingMenu = document.querySelector('.copy-menu');
-            if (existingMenu) {
-                existingMenu.remove();
-            }
+            // Clean up all menus
+            document.querySelectorAll('.copy-menu').forEach(m => m.remove());
 
             // Unlock rolodex rotation
             this.isRolodexLocked = false;
             this.isCardSelected = false;
 
-            // Remove modal state classes (Bootstrap pattern)
-            document.body.classList.remove('modal-open');
-            document.querySelector('.rolodex-wrapper').classList.remove('modal-backdrop-active');
+            // Remove targeted lock class
+            document.querySelector('.rolodex-wrapper').classList.remove('rolodex-locked');
 
-            // Remove active slide state (Swiper pattern)
-            if (this.selectedCard) {
-                this.selectedCard.classList.remove('swiper-slide-active');
-                this.selectedCard = null;
-                this.selectedCaseData = null;
-            }
+            // Remove selected state from all cards
+            document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
+
+            // Clear selected card reference
+            this.selectedCard = null;
+            this.selectedCaseData = null;
         }
 
         centerSelectedCard(cardElement) {
