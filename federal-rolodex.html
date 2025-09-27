@@ -265,16 +265,20 @@
         /* Mobile landscape - working rule */
         @media screen and (orientation: landscape) and (max-height: 500px) {
             .card {
-                width: 380px;
-                max-width: 380px;
-                height: 60px;
-                padding: 0 12px;
+                width: 450px;
+                max-width: 450px;
+                height: 70px;
+                padding: 0 15px;
                 left: 50%;
                 transform: translateX(-50%);
             }
 
+            .rolodex-container {
+                perspective: 1500px;
+            }
+
             .rolodex {
-                transform: translate(-50%, -50%) perspective(1000px);
+                transform: translate(-50%, -50%);
             }
         }
 
