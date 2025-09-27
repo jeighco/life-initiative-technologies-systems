@@ -1007,9 +1007,14 @@
 
                 e.preventDefault();
                 e.stopPropagation();
-                const deltaY = e.clientY - this.startY;
-                const currentTime = Date.now();
 
+                // Real-time position update - no delay
+                const deltaY = e.clientY - this.startY;
+                this.currentRotation = this.startRotation - (deltaY * 0.8);
+                this.updateRolodexRotation();
+
+                // Calculate velocity for momentum (after position update)
+                const currentTime = Date.now();
                 if (this.lastMoveTime) {
                     const timeDiff = currentTime - this.lastMoveTime;
                     const yDiff = e.clientY - this.lastMoveY;
@@ -1018,8 +1023,6 @@
 
                 this.lastMoveTime = currentTime;
                 this.lastMoveY = e.clientY;
-                this.currentRotation = this.startRotation - (deltaY * 0.8);
-                this.updateRolodexRotation();
             });
 
             document.addEventListener('mouseup', () => {
@@ -1046,9 +1049,14 @@
 
                 e.preventDefault();
                 e.stopPropagation();
-                const deltaY = e.touches[0].clientY - this.startY;
-                const currentTime = Date.now();
 
+                // Real-time position update - no delay
+                const deltaY = e.touches[0].clientY - this.startY;
+                this.currentRotation = this.startRotation - (deltaY * 0.8);
+                this.updateRolodexRotation();
+
+                // Calculate velocity for momentum (after position update)
+                const currentTime = Date.now();
                 if (this.lastMoveTime) {
                     const timeDiff = currentTime - this.lastMoveTime;
                     const yDiff = e.touches[0].clientY - this.lastMoveY;
@@ -1057,8 +1065,6 @@
 
                 this.lastMoveTime = currentTime;
                 this.lastMoveY = e.touches[0].clientY;
-                this.currentRotation = this.startRotation - (deltaY * 0.8);
-                this.updateRolodexRotation();
             }, { passive: false });
 
             document.addEventListener('touchend', () => {
