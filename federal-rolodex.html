@@ -67,8 +67,8 @@
             }
 
             .card {
-                left: 50%;
-                transform: translateX(-50%);
+                left: 80px;
+                transform: none;
                 width: 500px;
                 max-width: 500px;
                 margin-left: 0;
@@ -670,7 +670,7 @@
 
                 // Check if desktop (1025px+) to apply correct transform
                 if (window.innerWidth >= 1025) {
-                    card.style.transform = `translateX(-50%) rotateX(${angle}deg) translateZ(${radius}px)`;
+                    card.style.transform = `rotateX(${angle}deg) translateZ(${radius}px)`;
                 } else {
                     card.style.transform = `rotateX(${angle}deg) translateZ(${radius}px)`;
                 }
