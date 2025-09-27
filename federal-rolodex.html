@@ -563,7 +563,7 @@
         async loadCases() {
             try {
                 console.log('Loading federal case data from enhanced_federal_report.json');
-                const response = await fetch('../coding-projects/baynet-news-system/Shared/Data/enhanced_federal_report.json');
+                const response = await fetch('./enhanced_federal_report.json');
                 if (response.ok) {
                     const data = await response.json();
                     this.allCases = data.all_results.regular_cases.map(case_ => ({
