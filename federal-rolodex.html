@@ -571,19 +571,19 @@
                     const regularCases = data.all_results.regular_cases.map(case_ => ({
                         id: case_.case_number,
                         title: case_.case_title,
-                        court: case_.court_name || 'Unknown Court',
+                        court: case_.court_name || case_.court_code || 'Unknown Court',
                         filed_date: case_.filed_date,
                         case_type: case_.case_type.toUpperCase(),
-                        url: case_.pacer_url
+                        url: case_.pacer_url || '#'
                     }));
 
                     const partyCases = data.all_results.party_cases.map(case_ => ({
                         id: case_.case_number,
                         title: case_.case_title,
-                        court: case_.court_name || 'Unknown Court',
+                        court: case_.court_name || case_.court_code || 'Unknown Court',
                         filed_date: case_.filed_date,
                         case_type: case_.case_type.toUpperCase(),
-                        url: case_.pacer_url
+                        url: case_.pacer_url || '#'
                     }));
 
                     // Combine all cases
@@ -747,8 +747,11 @@
 
                 card.addEventListener('click', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     if (case_.url && case_.url !== '#') {
                         window.open(case_.url, '_blank');
+                    } else {
+                        alert('No PACER URL available for this case');
                     }
                 });
 
