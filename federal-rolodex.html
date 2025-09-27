@@ -222,6 +222,7 @@
             transform: translate(-50%, -50%);
             cursor: grab;
             user-select: none;
+            transition: transform 0.5s ease;
         }
 
         .rolodex:active {
@@ -498,35 +499,67 @@
             }
         }
 
-        .card.selected {
-            transform: translateX(-50%) scale(1.1) !important;
-            box-shadow: 0 0 30px rgba(0, 255, 0, 0.8) !important;
-            z-index: 100 !important;
+        /* Modal overlay styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .modal-card {
+            width: min(72vw, 540px);
+            height: 72px;
+            background: linear-gradient(135deg, #001100 0%, #003300 50%, #001100 100%);
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            padding: 0 18px;
+            box-sizing: border-box;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.8);
+            color: #00ff00;
+            margin-bottom: 20px;
+            transform: scale(1.1);
         }
 
         .copy-menu {
             background: rgba(0, 20, 0, 0.95);
             border: 1px solid #00ff00;
             border-radius: 8px;
-            padding: 10px;
-            z-index: 1000;
+            padding: 15px;
             box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
+        }
+
+        .copy-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
         }
 
         .copy-buttons button {
             background: rgba(0, 255, 0, 0.2);
             border: 1px solid #00ff00;
             color: #00ff00;
-            padding: 5px 10px;
-            margin: 2px;
+            padding: 8px 15px;
             border-radius: 4px;
             cursor: pointer;
             font-family: 'Courier New', monospace;
             font-size: 12px;
+            transition: all 0.3s ease;
         }
 
         .copy-buttons button:hover {
             background: rgba(0, 255, 0, 0.3);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
         }
 
         .copy-notification {
@@ -546,43 +579,9 @@
             opacity: 0;
         }
 
-        /* Targeted modal patterns - ONLY blur non-selected rolodex cards */
-
-        /* Keep normal card sizing unless selected */
-        .card {
-            transform: translateX(-50%);
-            opacity: 1;
-            transition: transform 0.5s ease, opacity 0.3s ease, filter 0.3s ease;
-        }
-
-        /* ONLY blur the rolodex background cards, NOT the selected card or other elements */
-        .rolodex-locked .rolodex .card:not(.selected) {
-            filter: blur(2px);
-            opacity: 0.3;
-        }
-
-        /* Selected card stays sharp and prominent */
-        .card.selected {
-            transform: translateX(-50%) scale(1.1);
-            z-index: 1000;
-            filter: none !important;
-            opacity: 1 !important;
-            box-shadow: 0 0 30px rgba(0, 255, 0, 0.8);
-        }
-
-        /* 3D carousel smooth transitions */
-        .rolodex {
-            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-
-        /* Modal state lock - disable rolodex interactions only */
-        .rolodex-locked .rolodex {
+        /* Lock rolodex when modal is open */
+        .rolodex-locked {
             pointer-events: none;
-        }
-
-        .rolodex-locked .card.selected {
-            pointer-events: auto;
-            cursor: pointer;
         }
     </style>
 </head>
@@ -638,8 +637,6 @@
             this.velocity = 0;
             this.lastMoveTime = 0;
             this.lastMoveY = 0;
-
-            // Modal UX state
             this.isRolodexLocked = false;
             this.selectedCard = null;
             this.selectedCaseData = null;
@@ -663,7 +660,7 @@
                 if (response.ok) {
                     const data = await response.json();
 
-                    // Combine regular cases and party watchlist cases
+                    // Combine regular cases and party cases
                     const regularCases = data.all_results.regular_cases.map(case_ => ({
                         id: case_.case_number,
                         title: case_.case_title,
@@ -808,10 +805,8 @@
             const pageCases = this.allCases.slice(startIndex, endIndex);
 
             pageCases.forEach((case_, index) => {
-                const card = document.createElement('a');
+                const card = document.createElement('div');
                 card.className = 'card';
-                card.href = case_.url;
-                card.target = '_blank';
 
                 const angle = (index / pageCases.length) * 360;
                 let radius = 150;
@@ -821,7 +816,6 @@
                     radius = 155;
                 }
 
-                // Apply translateX(-50%) for all screen sizes since CSS handles it
                 card.style.transform = `translateX(-50%) rotateX(${angle}deg) translateZ(${radius}px)`;
 
                 const title = case_.title;
@@ -841,24 +835,24 @@
                     </div>
                 `;
 
-                // Long-press for mobile
+                // Long-press tracking
                 let longPressTimer;
                 let longPressTriggered = false;
 
-                // Single click behavior depends on menu state
+                // Single click - open URL directly
                 card.addEventListener('click', (e) => {
-                    if (longPressTriggered) return; // Ignore if long-press was triggered
+                    if (longPressTriggered) return;
 
                     e.preventDefault();
                     e.stopPropagation();
 
-                    // If this is the selected card and menu is open, dismiss menu
+                    // If this is the selected card and modal is open, dismiss modal
                     if (this.isCardSelected && this.selectedCard === card) {
                         this.dismissMenu();
                         return;
                     }
 
-                    // If menu is open but this isn't the selected card, ignore click
+                    // If modal is open for different card, ignore click
                     if (this.isCardSelected) return;
 
                     // Normal behavior: open URL directly
@@ -875,6 +869,7 @@
                     this.showCopyMenu(case_, card);
                 });
 
+                // Touch events for mobile long-press
                 card.addEventListener('touchstart', (e) => {
                     longPressTriggered = false;
                     longPressTimer = setTimeout(() => {
@@ -886,8 +881,6 @@
 
                 card.addEventListener('touchend', (e) => {
                     clearTimeout(longPressTimer);
-
-                    // If long-press was triggered, prevent the click event
                     if (longPressTriggered) {
                         e.preventDefault();
                         e.stopPropagation();
@@ -895,7 +888,6 @@
                 });
 
                 card.addEventListener('touchmove', () => {
-                    // Cancel long-press if user moves finger
                     clearTimeout(longPressTimer);
                 });
 
@@ -947,13 +939,13 @@
         }
 
         startMomentum() {
-            if (Math.abs(this.velocity) < 0.01) return; // Much lower threshold
+            if (Math.abs(this.velocity) < 0.01) return;
 
             const friction = 0.98; // Less friction = spins longer
             let currentVelocity = this.velocity * -3.0; // Much stronger response to force
 
             const animate = () => {
-                // Gradual slowdown when locked, not hard stop - like varying friction
+                // Gradual slowdown when locked (like varying friction on real spinner)
                 if (this.isRolodexLocked) {
                     currentVelocity *= 0.85; // Faster deceleration but still smooth
                 } else {
@@ -1002,7 +994,7 @@
             const rolodexWrapper = document.querySelector('.rolodex-wrapper');
 
             rolodexWrapper.addEventListener('mousedown', (e) => {
-                if (this.isRolodexLocked) return; // Don't allow dragging when locked
+                if (this.isRolodexLocked) return;
                 this.isDragging = true;
                 this.startY = e.clientY;
                 this.startRotation = this.currentRotation;
@@ -1018,7 +1010,6 @@
                 const deltaY = e.clientY - this.startY;
                 const currentTime = Date.now();
 
-                // Calculate velocity for momentum
                 if (this.lastMoveTime) {
                     const timeDiff = currentTime - this.lastMoveTime;
                     const yDiff = e.clientY - this.lastMoveY;
@@ -1042,7 +1033,7 @@
                 // Immediate stop on touch - like a real spinner
                 this.velocity = 0;
 
-                if (this.isRolodexLocked) return; // Don't allow touch dragging when locked
+                if (this.isRolodexLocked) return;
                 this.isDragging = true;
                 this.startY = e.touches[0].clientY;
                 this.startRotation = this.currentRotation;
@@ -1058,7 +1049,6 @@
                 const deltaY = e.touches[0].clientY - this.startY;
                 const currentTime = Date.now();
 
-                // Calculate velocity for momentum
                 if (this.lastMoveTime) {
                     const timeDiff = currentTime - this.lastMoveTime;
                     const yDiff = e.touches[0].clientY - this.lastMoveY;
@@ -1079,15 +1069,13 @@
             });
 
             rolodexWrapper.addEventListener('wheel', (e) => {
-                if (this.isRolodexLocked) return; // Don't allow wheel rotation when locked
+                if (this.isRolodexLocked) return;
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
                 this.currentRotation += e.deltaY * 0.15;
                 this.updateRolodexRotation();
             }, { passive: false });
-
-            // Note: Click-away dismissal removed - only selected card click dismisses menu
         }
 
         updateStats() {
@@ -1099,32 +1087,26 @@
         }
 
         showCopyMenu(caseData, cardElement) {
-            // Clean up first
+            // Dismiss any existing modal first
             this.dismissMenu();
 
-            // Lock rolodex and set state
+            // Lock rolodex
             this.isRolodexLocked = true;
             this.isCardSelected = true;
             this.selectedCard = cardElement;
             this.selectedCaseData = caseData;
 
-            // 1. REMOVE the card from 3D space entirely (stable overlay pattern)
-            cardElement.style.transform = 'translateX(-50%) translateY(-50%) scale(1.1)';
-            cardElement.style.position = 'fixed';
-            cardElement.style.top = '40%';
-            cardElement.style.left = '50%';
-            cardElement.style.zIndex = '1000';
+            // Create modal overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.id = 'modal-overlay';
 
-            // 2. Hide other cards (blur background)
-            document.querySelector('.rolodex-wrapper').classList.add('rolodex-locked');
-            document.querySelectorAll('.card').forEach(c => {
-                if (c !== cardElement) {
-                    c.style.opacity = '0.3';
-                    c.style.filter = 'blur(2px)';
-                }
-            });
+            // Create card clone for modal
+            const modalCard = document.createElement('div');
+            modalCard.className = 'modal-card';
+            modalCard.innerHTML = cardElement.innerHTML;
 
-            // 3. Create copy menu
+            // Create menu
             const menu = document.createElement('div');
             menu.className = 'copy-menu';
             menu.innerHTML = `
@@ -1136,75 +1118,42 @@
                 </div>
             `;
 
-            // Position menu below the centered card
-            menu.style.position = 'fixed';
-            menu.style.top = '55%';
-            menu.style.left = '50%';
-            menu.style.transform = 'translateX(-50%)';
-            menu.style.zIndex = '1001';
+            // Assemble modal
+            overlay.appendChild(modalCard);
+            overlay.appendChild(menu);
 
-            document.body.appendChild(menu);
+            // Add click-away dismissal
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    this.dismissMenu();
+                }
+            });
+
+            // Show modal
+            document.body.appendChild(overlay);
+
+            // Lock rolodex
+            document.querySelector('.rolodex-wrapper').classList.add('rolodex-locked');
         }
 
         dismissMenu() {
-            // 1. Restore card to rolodex (remove from overlay)
-            if (this.selectedCard) {
-                this.selectedCard.style.transform = '';
-                this.selectedCard.style.position = '';
-                this.selectedCard.style.top = '';
-                this.selectedCard.style.left = '';
-                this.selectedCard.style.zIndex = '';
+            // Remove modal overlay
+            const overlay = document.getElementById('modal-overlay');
+            if (overlay) {
+                overlay.remove();
             }
 
-            // 2. Show other cards (restore normal appearance)
-            document.querySelectorAll('.card').forEach(c => {
-                c.style.opacity = '1';
-                c.style.filter = '';
-            });
-
-            // 3. Remove menu and unlock rolodex
-            document.querySelectorAll('.copy-menu').forEach(m => m.remove());
-            document.querySelector('.rolodex-wrapper').classList.remove('rolodex-locked');
-
-            // 4. Unlock rolodex rotation
+            // Unlock rolodex
             this.isRolodexLocked = false;
             this.isCardSelected = false;
-
-            // 5. Clear selected card reference
             this.selectedCard = null;
             this.selectedCaseData = null;
 
             // DON'T reset velocity here - let natural momentum continue
             this.isDragging = false;
 
-            // 6. Fresh render fixes any positioning issues
-            this.renderRolodex();
-        }
-
-        centerSelectedCard(cardElement) {
-            return new Promise((resolve) => {
-                // Calculate rotation to center this card (industry standard pattern)
-                const cards = document.querySelectorAll('.card');
-                const cardIndex = Array.from(cards).indexOf(cardElement);
-                const totalCards = cards.length;
-
-                if (totalCards === 0) {
-                    resolve();
-                    return;
-                }
-
-                // Calculate the angle this card is at
-                const currentCardAngle = (cardIndex / totalCards) * 360;
-                // Center it at 0 degrees (front)
-                const targetRotation = -currentCardAngle;
-
-                // Apply rotation instantly - CSS transition handles the smoothness
-                this.currentRotation = targetRotation;
-                this.updateRolodexRotation();
-
-                // Wait for CSS transition to complete (0.5s as defined in CSS)
-                setTimeout(resolve, 500);
-            });
+            // Remove lock class
+            document.querySelector('.rolodex-wrapper').classList.remove('rolodex-locked');
         }
 
         copyToClipboard(text, label) {
