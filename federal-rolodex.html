@@ -680,7 +680,12 @@
                 card.target = '_blank';
 
                 const angle = (index / pageCases.length) * 360;
-                const radius = 150;
+                let radius = 150;
+
+                // Tighter radius for landscape mobile
+                if (window.innerHeight <= 500 && window.orientation !== undefined) {
+                    radius = 80;
+                }
 
                 // Apply translateX(-50%) for all screen sizes since CSS handles it
                 card.style.transform = `translateX(-50%) rotateX(${angle}deg) translateZ(${radius}px)`;
