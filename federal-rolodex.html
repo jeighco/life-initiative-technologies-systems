@@ -804,7 +804,7 @@
                 e.preventDefault();
                 e.stopPropagation();
                 const deltaY = e.clientY - this.startY;
-                this.currentRotation = this.startRotation - (deltaY * 0.3);
+                this.currentRotation = this.startRotation - (deltaY * 0.8);
                 this.updateRolodexRotation();
             });
 
@@ -826,7 +826,7 @@
                 e.preventDefault();
                 e.stopPropagation();
                 const deltaY = e.touches[0].clientY - this.startY;
-                this.currentRotation = this.startRotation - (deltaY * 0.3);
+                this.currentRotation = this.startRotation - (deltaY * 0.8);
                 this.updateRolodexRotation();
             }, { passive: false });
 
@@ -838,7 +838,7 @@
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
-                this.currentRotation -= e.deltaY * 0.05;
+                this.currentRotation -= e.deltaY * 0.15;
                 this.updateRolodexRotation();
             }, { passive: false });
         }
