@@ -262,15 +262,17 @@
             }
         }
 
-        @media (max-width: 768px) and (orientation: landscape) {
+        /* DEBUG: Super broad landscape rule */
+        @media (orientation: landscape) {
             .card {
-                width: 200px !important;
-                max-width: 200px !important;
-                height: 45px !important;
-                padding: 0 5px !important;
+                width: 180px !important;
+                max-width: 180px !important;
+                height: 40px !important;
+                padding: 0 4px !important;
                 left: 50% !important;
                 transform: translateX(-50%) !important;
-                background: red !important; /* DEBUG - to see if this rule applies */
+                background: red !important; /* DEBUG */
+                border: 3px solid yellow !important; /* Even more obvious */
             }
         }
 
