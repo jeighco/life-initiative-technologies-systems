@@ -545,6 +545,29 @@
         .copy-notification.fade-out {
             opacity: 0;
         }
+
+        /* Modal UX styles */
+        .blurred-background {
+            filter: blur(2px);
+            opacity: 0.7;
+            transition: all 0.3s ease;
+        }
+
+        .selected-card-active {
+            animation: wiggle 0.6s ease-in-out infinite alternate;
+            transform: translateX(-50%) scale(1.1) !important;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.9) !important;
+            z-index: 100 !important;
+        }
+
+        @keyframes wiggle {
+            0% { transform: translateX(-50%) scale(1.1) rotate(-1deg); }
+            100% { transform: translateX(-50%) scale(1.1) rotate(1deg); }
+        }
+
+        .rolodex-wrapper.blurred-background .card:not(.selected-card-active) {
+            opacity: 0.4;
+        }
     </style>
 </head>
 <body>
@@ -599,8 +622,12 @@
             this.velocity = 0;
             this.lastMoveTime = 0;
             this.lastMoveY = 0;
-            this.selectedCardId = null;
-            this.isCardSelected = false;
+
+            // Modal UX state
+            this.isRolodexLocked = false;
+            this.selectedCard = null;
+            this.selectedCaseData = null;
+
             this.init();
             window.rolodex = this; // Make accessible for popup buttons
         }
@@ -802,14 +829,23 @@
                 let longPressTimer;
                 let longPressTriggered = false;
 
-                // Single click - open URL directly
+                // Single click behavior depends on menu state
                 card.addEventListener('click', (e) => {
-                    if (this.isCardSelected) return; // Ignore if menu is open
                     if (longPressTriggered) return; // Ignore if long-press was triggered
 
                     e.preventDefault();
                     e.stopPropagation();
 
+                    // If this is the selected card and menu is open, dismiss menu
+                    if (this.isCardSelected && this.selectedCard === card) {
+                        this.dismissMenu();
+                        return;
+                    }
+
+                    // If menu is open but this isn't the selected card, ignore click
+                    if (this.isCardSelected) return;
+
+                    // Normal behavior: open URL directly
                     if (case_.url && case_.url !== '#') {
                         window.open(case_.url, '_blank');
                     } else {
@@ -944,6 +980,7 @@
             const rolodexWrapper = document.querySelector('.rolodex-wrapper');
 
             rolodexWrapper.addEventListener('mousedown', (e) => {
+                if (this.isRolodexLocked) return; // Don't allow dragging when locked
                 this.isDragging = true;
                 this.startY = e.clientY;
                 this.startRotation = this.currentRotation;
@@ -952,7 +989,7 @@
             });
 
             document.addEventListener('mousemove', (e) => {
-                if (!this.isDragging) return;
+                if (!this.isDragging || this.isRolodexLocked) return;
 
                 e.preventDefault();
                 e.stopPropagation();
@@ -980,6 +1017,7 @@
             });
 
             rolodexWrapper.addEventListener('touchstart', (e) => {
+                if (this.isRolodexLocked) return; // Don't allow touch dragging when locked
                 this.isDragging = true;
                 this.startY = e.touches[0].clientY;
                 this.startRotation = this.currentRotation;
@@ -988,7 +1026,7 @@
             }, { passive: false });
 
             document.addEventListener('touchmove', (e) => {
-                if (!this.isDragging) return;
+                if (!this.isDragging || this.isRolodexLocked) return;
 
                 e.preventDefault();
                 e.stopPropagation();
@@ -1016,6 +1054,7 @@
             });
 
             rolodexWrapper.addEventListener('wheel', (e) => {
+                if (this.isRolodexLocked) return; // Don't allow wheel rotation when locked
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
@@ -1023,15 +1062,7 @@
                 this.updateRolodexRotation();
             }, { passive: false });
 
-            // Click-away to dismiss copy menu
-            document.addEventListener('click', (e) => {
-                // Don't dismiss if clicking on the menu itself or its buttons
-                if (e.target.closest('.copy-menu')) return;
-                // Don't dismiss if clicking on a card (which might be triggering context menu)
-                if (e.target.closest('.card')) return;
-
-                this.dismissMenu();
-            });
+            // Note: Click-away dismissal removed - only selected card click dismisses menu
         }
 
         updateStats() {
@@ -1046,8 +1077,17 @@
             // Remove existing menu
             this.dismissMenu();
 
-            // Mark that menu is open
+            // Lock rolodex rotation
+            this.isRolodexLocked = true;
             this.isCardSelected = true;
+            this.selectedCard = cardElement;
+            this.selectedCaseData = caseData;
+
+            // Bring selected card to front-center position
+            this.bringCardToFront(cardElement);
+
+            // Add blur effect to background
+            document.querySelector('.rolodex-wrapper').classList.add('blurred-background');
 
             // Create copy menu
             const menu = document.createElement('div');
@@ -1070,10 +1110,10 @@
 
             document.body.appendChild(menu);
 
-            // Auto-hide after 8 seconds
-            setTimeout(() => {
-                this.dismissMenu();
-            }, 8000);
+            // Add wiggle effect to selected card
+            cardElement.classList.add('selected-card-active');
+
+            // No auto-dismiss - only selected card click dismisses
         }
 
         dismissMenu() {
@@ -1081,7 +1121,39 @@
             if (existingMenu) {
                 existingMenu.remove();
             }
+
+            // Unlock rolodex rotation
+            this.isRolodexLocked = false;
             this.isCardSelected = false;
+
+            // Remove blur effect
+            document.querySelector('.rolodex-wrapper').classList.remove('blurred-background');
+
+            // Remove wiggle effect from selected card
+            if (this.selectedCard) {
+                this.selectedCard.classList.remove('selected-card-active');
+                this.selectedCard = null;
+                this.selectedCaseData = null;
+            }
+        }
+
+        bringCardToFront(cardElement) {
+            // Calculate the rotation needed to bring this card to front-center (0 degrees)
+            const cards = document.querySelectorAll('.card');
+            const cardIndex = Array.from(cards).indexOf(cardElement);
+            const totalCards = cards.length;
+
+            if (totalCards === 0) return;
+
+            // Calculate the angle this card is currently at
+            const currentCardAngle = (cardIndex / totalCards) * 360;
+
+            // Calculate how much we need to rotate to bring it to 0 (front)
+            const rotationNeeded = -currentCardAngle;
+
+            // Apply the rotation to bring card to front
+            this.currentRotation = rotationNeeded;
+            this.updateRolodexRotation();
         }
 
         copyToClipboard(text, label) {
