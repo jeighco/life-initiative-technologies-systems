@@ -562,7 +562,7 @@
 
         async loadCases() {
             try {
-                console.log('Loading federal case data from enhanced_federal_report.json');
+                console.log('Loading federal case data from enhanced_federal_report.json - 357 cases expected');
                 const response = await fetch('./enhanced_federal_report.json');
                 if (response.ok) {
                     const data = await response.json();
