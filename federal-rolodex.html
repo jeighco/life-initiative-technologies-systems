@@ -222,7 +222,6 @@
             transform: translate(-50%, -50%);
             cursor: grab;
             user-select: none;
-            transition: transform 0.5s ease;
         }
 
         .rolodex:active {
@@ -941,21 +940,14 @@
         startMomentum() {
             if (Math.abs(this.velocity) < 0.01) return;
 
-            const friction = 0.98; // Less friction = spins longer
-            let currentVelocity = this.velocity * -3.0; // Much stronger response to force
+            const friction = 0.98;
+            let currentVelocity = this.velocity * -3.0;
 
             const animate = () => {
-                // Gradual slowdown when locked (like varying friction on real spinner)
-                if (this.isRolodexLocked) {
-                    currentVelocity *= 0.85; // Faster deceleration but still smooth
-                } else {
-                    currentVelocity *= friction; // Normal friction
-                }
-
+                currentVelocity *= friction;
                 this.currentRotation += currentVelocity;
                 this.updateRolodexRotation();
 
-                // Continue if still moving fast enough
                 if (Math.abs(currentVelocity) > 0.01) {
                     requestAnimationFrame(animate);
                 }
@@ -1007,14 +999,9 @@
 
                 e.preventDefault();
                 e.stopPropagation();
-
-                // Real-time position update - no delay
                 const deltaY = e.clientY - this.startY;
-                this.currentRotation = this.startRotation - (deltaY * 0.8);
-                this.updateRolodexRotation();
-
-                // Calculate velocity for momentum (after position update)
                 const currentTime = Date.now();
+
                 if (this.lastMoveTime) {
                     const timeDiff = currentTime - this.lastMoveTime;
                     const yDiff = e.clientY - this.lastMoveY;
@@ -1023,6 +1010,8 @@
 
                 this.lastMoveTime = currentTime;
                 this.lastMoveY = e.clientY;
+                this.currentRotation = this.startRotation - (deltaY * 0.8);
+                this.updateRolodexRotation();
             });
 
             document.addEventListener('mouseup', () => {
@@ -1035,7 +1024,7 @@
             rolodexWrapper.addEventListener('touchstart', (e) => {
                 // Immediate stop on touch - like a real spinner
                 this.velocity = 0;
-
+                
                 if (this.isRolodexLocked) return;
                 this.isDragging = true;
                 this.startY = e.touches[0].clientY;
@@ -1049,14 +1038,9 @@
 
                 e.preventDefault();
                 e.stopPropagation();
-
-                // Real-time position update - no delay
                 const deltaY = e.touches[0].clientY - this.startY;
-                this.currentRotation = this.startRotation - (deltaY * 0.8);
-                this.updateRolodexRotation();
-
-                // Calculate velocity for momentum (after position update)
                 const currentTime = Date.now();
+
                 if (this.lastMoveTime) {
                     const timeDiff = currentTime - this.lastMoveTime;
                     const yDiff = e.touches[0].clientY - this.lastMoveY;
@@ -1065,6 +1049,8 @@
 
                 this.lastMoveTime = currentTime;
                 this.lastMoveY = e.touches[0].clientY;
+                this.currentRotation = this.startRotation - (deltaY * 0.8);
+                this.updateRolodexRotation();
             }, { passive: false });
 
             document.addEventListener('touchend', () => {
@@ -1154,8 +1140,6 @@
             this.isCardSelected = false;
             this.selectedCard = null;
             this.selectedCaseData = null;
-
-            // DON'T reset velocity here - let natural momentum continue
             this.isDragging = false;
 
             // Remove lock class
