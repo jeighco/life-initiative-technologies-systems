@@ -1,58 +1,4 @@
 {
-  "date": "2025-09-26",
-  "monitoring_type": "Enhanced Batch Monitoring",
-  "summary": {
-    "total_regular_cases": 33,
-    "total_party_cases": 324,
-    "total_terminated_cases": 0,
-    "total_dismissed_cases": 0,
-    "grand_total": 357,
-    "search_date": "2025-09-26",
-    "days_searched": 7
-  },
-  "notable_party_cases": [
-    {
-      "case_number": "0:2021pr00200",
-      "party_name": "Donald Trump",
-      "case_title": "King v. Trump",
-      "court_code": "02ca",
-      "party_role": " "
-    },
-    {
-      "case_number": "0:2021cv00893",
-      "party_name": "Donald Trump",
-      "case_title": "Renaud v. Trump",
-      "court_code": "02ca",
-      "party_role": " "
-    },
-    {
-      "case_number": "0:2021cv00934",
-      "party_name": "Donald Trump",
-      "case_title": "Epperson v. United States",
-      "court_code": "02ca",
-      "party_role": " "
-    },
-    {
-      "case_number": "0:2021cv01276",
-      "party_name": "Donald Trump",
-      "case_title": "Morris v. The United States of America",
-      "court_code": "02ca",
-      "party_role": " "
-    },
-    {
-      "case_number": "0:2021cv01293",
-      "party_name": "Donald Trump",
-      "case_title": "Luevano v. Trump",
-      "court_code": "02ca",
-      "party_role": " "
-    }
-  ],
-  "case_breakdown": {
-    "regular_cases": 33,
-    "party_watchlist_cases": 324,
-    "terminated_cases": 0,
-    "dismissed_cases": 0
-  },
   "all_results": {
     "regular_cases": [
       {
@@ -417,6 +363,70 @@
         "nature_of_suit": "151",
         "pacer_url": "https://ecf.dcd.uscourts.gov//cgi-bin/iqquerymenu.pl?285307",
         "created_date": "2025-09-26T14:14:14.671575"
+      },
+      {
+        "case_number": "1:2025cv01338",
+        "court_code": "nynd",
+        "court_name": "Northern District of New York",
+        "case_title": "United States of America v. Board Of Elections of the State of New York et al",
+        "filed_date": "2025-09-25",
+        "case_type": "cv",
+        "nature_of_suit": "441",
+        "pacer_url": "https://ecf.nynd.uscourts.gov/cgi-bin/iqquerymenu.pl?150197",
+        "created_date": "2025-09-28T18:24:51.911966",
+        "document_info": {
+          "case_number": "1:2025cv01338",
+          "document_type": "HTML",
+          "file_path": "pacer_documents/1_2025cv01338.html",
+          "case_link": "https://ecf.nynd.uscourts.gov/cgi-bin/iqquerymenu.pl?150197",
+          "full_text": "CM/ECF LIVE - U.S. District Court - NYND document.cookie=\"FilingStatus=; path=/; expires=Thu, 01-Jan-1970 00:00:01 GMT\"; document.cookie=\"PacerFirm=; path=/; domain=.uscourts.gov; expires=Thu, 01-Jan-1970 00:00:01 GMT\"; document.cookie=\"KEY=; path=/; domain=.uscourts.gov; expires=Thu, 01-Jan-1970 00:00:01 GMT\"; document.cookie=\"KEY=; path=/; expires=Thu, 01-Jan-1970 00:00:01 GMT\"; document.cookie=\"PublicTerminal=; path=/; domain=.uscourts.gov; expires=Thu, 01-Jan-1970 00:00:01 GMT\"; if (\"https://pacer.login.uscourts.gov/csologin/login.jsf?pscCourtId=NYNDC&appurl=https://ecf.nynd.uscourts.gov/cgi-bin/iqquerymenu.pl?150197\".length > 0) { location.assign(\"https://pacer.login.uscourts.gov/csologin/login.jsf?pscCourtId=NYNDC&appurl=https://ecf.nynd.uscourts.gov/cgi-bin/iqquerymenu.pl?150197\"); }",
+          "extracted_date": "2025-09-28T18:24:52.253555",
+          "metadata": {
+            "content_length": 1133
+          },
+          "charges": [],
+          "defendants": [],
+          "attorneys": [],
+          "judges": [],
+          "key_dates": [],
+          "legal_citations": [],
+          "violations": []
+        },
+        "has_document": true,
+        "keywords_matched": "",
+        "priority_score": 0
+      },
+      {
+        "case_number": "2:2025cv09149",
+        "court_code": "cacd",
+        "court_name": "Central District of California",
+        "case_title": "UNITED STATES OF AMERICA v. Weber et al",
+        "filed_date": "2025-09-25",
+        "case_type": "cv",
+        "nature_of_suit": "441",
+        "pacer_url": "https://ecf.cacd.uscourts.gov/cgi-bin/iqquerymenu.pl?988465",
+        "created_date": "2025-09-28T18:24:52.699875",
+        "document_info": {
+          "case_number": "2:2025cv09149",
+          "document_type": "HTML",
+          "file_path": "pacer_documents/2_2025cv09149.html",
+          "case_link": "https://ecf.cacd.uscourts.gov/cgi-bin/iqquerymenu.pl?988465",
+          "full_text": "CM/ECF - California Central District document.cookie=\"FilingStatus=; path=/; expires=Thu, 01-Jan-1970 00:00:01 GMT\"; document.cookie=\"PacerFirm=; path=/; domain=.uscourts.gov; expires=Thu, 01-Jan-1970 00:00:01 GMT\"; document.cookie=\"KEY=; path=/; domain=.uscourts.gov; expires=Thu, 01-Jan-1970 00:00:01 GMT\"; document.cookie=\"KEY=; path=/; expires=Thu, 01-Jan-1970 00:00:01 GMT\"; document.cookie=\"PublicTerminal=; path=/; domain=.uscourts.gov; expires=Thu, 01-Jan-1970 00:00:01 GMT\"; if (\"https://pacer.login.uscourts.gov/csologin/login.jsf?pscCourtId=CACDC&appurl=https://ecf.cacd.uscourts.gov/cgi-bin/iqquerymenu.pl?988465\".length > 0) { location.assign(\"https://pacer.login.uscourts.gov/csologin/login.jsf?pscCourtId=CACDC&appurl=https://ecf.cacd.uscourts.gov/cgi-bin/iqquerymenu.pl?988465\"); }",
+          "extracted_date": "2025-09-28T18:24:53.286723",
+          "metadata": {
+            "content_length": 1129
+          },
+          "charges": [],
+          "defendants": [],
+          "attorneys": [],
+          "judges": [],
+          "key_dates": [],
+          "legal_citations": [],
+          "violations": []
+        },
+        "has_document": true,
+        "keywords_matched": "",
+        "priority_score": 0
       }
     ],
     "party_cases": [
@@ -4308,18 +4318,126 @@
         "pacer_url": "",
         "created_date": "2025-09-26T14:14:25.197331"
       }
-    ],
-    "terminated_cases": [],
-    "dismissed_cases": [],
-    "summary": {
-      "total_regular_cases": 33,
-      "total_party_cases": 324,
-      "total_terminated_cases": 0,
-      "total_dismissed_cases": 0,
-      "grand_total": 357,
-      "search_date": "2025-09-26",
-      "days_searched": 7
-    }
+    ]
   },
-  "notifications_sent": 69
+  "recent_filings": [
+    {
+      "case_number": "1:2025cv03414",
+      "court_code": "dcd",
+      "court_name": "District of Columbia",
+      "case_title": "OVERSIGHT v. JUSTICE",
+      "filed_date": "2025-09-25",
+      "case_type": "cv",
+      "nature_of_suit": "895",
+      "pacer_url": "https://ecf.dcd.uscourts.gov//cgi-bin/iqquerymenu.pl?285262",
+      "created_date": "2025-09-26T14:14:14.670905"
+    },
+    {
+      "case_number": "1:2025cv03415",
+      "court_code": "dcd",
+      "court_name": "District of Columbia",
+      "case_title": "MORGAN v. WINGATE PROPERTIES LLC et al",
+      "filed_date": "2025-09-25",
+      "case_type": "cv",
+      "nature_of_suit": "360",
+      "pacer_url": "https://ecf.dcd.uscourts.gov//cgi-bin/iqquerymenu.pl?285263",
+      "created_date": "2025-09-26T14:14:14.671008"
+    },
+    {
+      "case_number": "1:2025cv03416",
+      "court_code": "dcd",
+      "court_name": "District of Columbia",
+      "case_title": "PERKINS v. IMMIGRANT INVESTOR PROGRAM OFFICE",
+      "filed_date": "2025-09-25",
+      "case_type": "cv",
+      "nature_of_suit": "465",
+      "pacer_url": "https://ecf.dcd.uscourts.gov//cgi-bin/iqquerymenu.pl?285267",
+      "created_date": "2025-09-26T14:14:14.671154"
+    },
+    {
+      "case_number": "1:2025cv03417",
+      "court_code": "dcd",
+      "court_name": "District of Columbia",
+      "case_title": "ESCOBAR MOLINA et al v. U.S. DEPARTMENT OF HOMELAND SECURITY et al",
+      "filed_date": "2025-09-25",
+      "case_type": "cv",
+      "nature_of_suit": "899",
+      "pacer_url": "https://ecf.dcd.uscourts.gov//cgi-bin/iqquerymenu.pl?285268",
+      "created_date": "2025-09-26T14:14:14.671225"
+    },
+    {
+      "case_number": "1:2025mj00232",
+      "court_code": "dcd",
+      "court_name": "District of Columbia",
+      "case_title": "USA v. ROBINSON",
+      "filed_date": "2025-09-25",
+      "case_type": "mj",
+      "nature_of_suit": "",
+      "pacer_url": "https://ecf.dcd.uscourts.gov//cgi-bin/iqquerymenu.pl?285273",
+      "created_date": "2025-09-26T14:14:14.671281"
+    },
+    {
+      "case_number": "1:2025mj00232",
+      "court_code": "dcd",
+      "court_name": "District of Columbia",
+      "case_title": "USA v. ROBINSON - AVERY RICARDO ROBINSON III",
+      "filed_date": "2025-09-25",
+      "case_type": "mj",
+      "nature_of_suit": "",
+      "pacer_url": "https://ecf.dcd.uscourts.gov//cgi-bin/iqquerymenu.pl?285274",
+      "created_date": "2025-09-26T14:14:14.671333"
+    },
+    {
+      "case_number": "1:2025cv03421",
+      "court_code": "dcd",
+      "court_name": "District of Columbia",
+      "case_title": "VELAYATI  et al v. RUBIO et al",
+      "filed_date": "2025-09-25",
+      "case_type": "cv",
+      "nature_of_suit": "465",
+      "pacer_url": "https://ecf.dcd.uscourts.gov//cgi-bin/iqquerymenu.pl?285289",
+      "created_date": "2025-09-26T14:14:14.671383"
+    },
+    {
+      "case_number": "1:2025cv03422",
+      "court_code": "dcd",
+      "court_name": "District of Columbia",
+      "case_title": "VAN CROFT v. SHI et al",
+      "filed_date": "2025-09-25",
+      "case_type": "cv",
+      "nature_of_suit": "360",
+      "pacer_url": "https://ecf.dcd.uscourts.gov//cgi-bin/iqquerymenu.pl?285295",
+      "created_date": "2025-09-26T14:14:14.671432"
+    },
+    {
+      "case_number": "1:2025cv03424",
+      "court_code": "dcd",
+      "court_name": "District of Columbia",
+      "case_title": "CODREA v. DEPARTMENT OF JUSTICE",
+      "filed_date": "2025-09-25",
+      "case_type": "cv",
+      "nature_of_suit": "895",
+      "pacer_url": "https://ecf.dcd.uscourts.gov//cgi-bin/iqquerymenu.pl?285302",
+      "created_date": "2025-09-26T14:14:14.671481"
+    },
+    {
+      "case_number": "1:2025cv03426",
+      "court_code": "dcd",
+      "court_name": "District of Columbia",
+      "case_title": "CENTRAL PHOTO COMPANY INC. v. RICHARDSON",
+      "filed_date": "2025-09-25",
+      "case_type": "cv",
+      "nature_of_suit": "190",
+      "pacer_url": "https://ecf.dcd.uscourts.gov//cgi-bin/iqquerymenu.pl?285303",
+      "created_date": "2025-09-26T14:14:14.671529"
+    }
+  ],
+  "last_updated": "2025-09-28T18:25:10.792106",
+  "total_cases": 359,
+  "update_source": "PACER Auto-Monitor (Preserved + New)",
+  "merge_stats": {
+    "existing_cases": 357,
+    "new_cases_added": 2,
+    "duplicates_skipped": 1
+  }
 }
