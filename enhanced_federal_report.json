@@ -201,7 +201,12 @@
       "premium_content_available": true
     }
   ],
-  "last_updated": "2025-09-28T17:47:38.924499",
+  "last_updated": "2025-09-28T18:08:59.593809",
   "total_cases": 3,
-  "update_source": "PACER Auto-Monitor"
+  "update_source": "PACER Auto-Monitor (Preserved + New)",
+  "merge_stats": {
+    "existing_cases": 3,
+    "new_cases_added": 0,
+    "duplicates_skipped": 3
+  }
 }
