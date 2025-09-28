@@ -14,6 +14,182 @@
             overflow-x: hidden;
         }
 
+        /* Top Navigation Bar */
+        .top-nav {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            background: linear-gradient(135deg, rgba(0, 20, 0, 0.9) 0%, rgba(0, 40, 0, 0.8) 100%);
+            border: 1px solid #00ff00;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            animation: pulse 3s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(0, 255, 0, 0.5); }
+        }
+
+        .nav-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 40px;
+            background: transparent;
+            border: none;
+            color: #00ff00;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 18px;
+        }
+
+        .nav-button:hover {
+            background: rgba(0, 255, 0, 0.2);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
+        }
+
+        .nav-button.active {
+            background: rgba(0, 255, 0, 0.3);
+        }
+
+        /* Dropdown Styles */
+        .dropdown {
+            position: fixed;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            max-height: 500px;
+            background: linear-gradient(135deg, rgba(0, 20, 0, 0.95) 0%, rgba(0, 40, 0, 0.90) 100%);
+            border: 1px solid #00ff00;
+            border-radius: 10px;
+            box-shadow: 0 0 25px rgba(0, 255, 0, 0.4);
+            z-index: 999;
+            display: none;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+
+        .dropdown.show {
+            display: block;
+            animation: dropdownFade 0.3s ease-in-out;
+        }
+
+        @keyframes dropdownFade {
+            from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        .dropdown-header {
+            padding: 15px;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.3);
+            font-weight: bold;
+            text-align: center;
+            background: rgba(0, 255, 0, 0.1);
+        }
+
+        /* Search Dropdown */
+        .search-input {
+            width: calc(100% - 30px);
+            padding: 10px 15px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            margin: 15px 15px 0 15px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .search-results {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .search-result-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(0, 255, 0, 0.1);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .search-result-item:hover {
+            background: rgba(0, 255, 0, 0.2);
+            border-left-color: #00ff00;
+        }
+
+        .search-result-case {
+            font-weight: bold;
+            font-size: 12px;
+            color: #ffffff;
+        }
+
+        .search-result-title {
+            font-size: 14px;
+            margin: 3px 0;
+            color: #00ff00;
+        }
+
+        .search-result-meta {
+            font-size: 10px;
+            color: #00cccc;
+        }
+
+        /* Saved Cases Dropdown */
+        .saved-cases-list {
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .saved-case-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: rgba(255, 255, 0, 0.1);
+            border: 1px solid rgba(255, 255, 0, 0.3);
+            border-radius: 5px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .saved-case-item:hover {
+            background: rgba(255, 255, 0, 0.2);
+        }
+
+        .saved-case-remove {
+            position: absolute;
+            top: 5px;
+            right: 8px;
+            background: none;
+            border: none;
+            color: #ff4444;
+            cursor: pointer;
+            font-size: 16px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .saved-case-remove:hover {
+            background: rgba(255, 68, 68, 0.2);
+        }
+
         .container {
             display: flex;
             width: 100vw;
@@ -22,7 +198,7 @@
             align-items: center;
             justify-content: center;
             gap: 30px;
-            padding: 20px;
+            padding: 60px 20px 20px 20px; /* Top padding for nav bar */
         }
 
         /* Desktop Layout */
@@ -49,7 +225,7 @@
                 flex-direction: row;
                 justify-content: center;
                 align-items: flex-start;
-                padding: 20px 40px;
+                padding: 60px 40px 20px 40px;
                 gap: 40px;
             }
 
@@ -119,7 +295,7 @@
                 height: auto;
                 min-height: 100vh;
                 gap: 20px;
-                padding: 5px 5px;
+                padding: 60px 5px 5px 5px;
             }
 
             .rolodex-container {
@@ -133,6 +309,11 @@
                 height: 350px;
                 margin: 0 10px;
             }
+
+            .dropdown {
+                width: 95%;
+                max-width: 350px;
+            }
         }
 
         /* Landscape Mobile/Tablet */
@@ -140,7 +321,7 @@
             .container {
                 flex-direction: row;
                 gap: 10px;
-                padding: 10px;
+                padding: 50px 10px 10px 10px;
                 justify-content: center;
             }
 
@@ -154,6 +335,11 @@
                 flex: 1;
                 max-width: 300px;
                 height: 300px;
+            }
+
+            .dropdown {
+                width: 90%;
+                max-width: 400px;
             }
         }
 
@@ -563,7 +749,7 @@
 
         .copy-notification {
             position: fixed;
-            top: 20px;
+            top: 60px;
             right: 20px;
             background: rgba(0, 255, 0, 0.9);
             color: black;
@@ -586,6 +772,27 @@
 </head>
 <body>
     <div class="matrix-bg" id="matrix-bg"></div>
+
+    <!-- Top Navigation -->
+    <div class="top-nav" id="top-nav">
+        <button class="nav-button" id="saved-btn" title="Saved Cases">📁</button>
+        <button class="nav-button" id="search-btn" title="Search Cases">🔍</button>
+    </div>
+
+    <!-- Search Dropdown -->
+    <div class="dropdown" id="search-dropdown">
+        <div class="dropdown-header">SEARCH FEDERAL CASES</div>
+        <input type="text" class="search-input" id="search-input" placeholder="Type case number, title, court...">
+        <div class="search-results" id="search-results"></div>
+    </div>
+
+    <!-- Saved Cases Dropdown -->
+    <div class="dropdown" id="saved-dropdown">
+        <div class="dropdown-header">SAVED CASES (<span id="saved-count">0</span>)</div>
+        <div class="saved-cases-list" id="saved-cases-list">
+            <div style="text-align: center; color: #666; padding: 20px;">No saved cases yet</div>
+        </div>
+    </div>
 
     <div class="loading-text" id="loading">
         >> Loading Federal Cases Database...
@@ -639,6 +846,8 @@
             this.isRolodexLocked = false;
             this.selectedCard = null;
             this.selectedCaseData = null;
+            this.savedCases = [];
+            this.searchResults = [];
 
             this.init();
             window.rolodex = this; // Make accessible for popup buttons
@@ -646,10 +855,293 @@
 
         async init() {
             await this.loadCases();
+            this.loadSavedCases();
             this.setupMatrixBackground();
             this.setupRolodex();
             this.setupControls();
             this.setupInteractions();
+            this.setupNavigation();
+            this.restoreSessionState();
+        }
+
+        // Session state management
+        saveSessionState() {
+            const state = {
+                currentPage: this.currentPage,
+                currentRotation: this.currentRotation,
+                timestamp: Date.now()
+            };
+            try {
+                sessionStorage.setItem('rolodexState', JSON.stringify(state));
+            } catch (e) {
+                console.log('Could not save session state');
+            }
+        }
+
+        restoreSessionState() {
+            try {
+                const savedState = sessionStorage.getItem('rolodexState');
+                if (savedState) {
+                    const state = JSON.parse(savedState);
+                    // Only restore if saved within last hour
+                    if (Date.now() - state.timestamp < 3600000) {
+                        this.currentPage = Math.min(state.currentPage, this.totalPages - 1);
+                        this.currentRotation = state.currentRotation;
+                        this.renderRolodex();
+                        this.updatePageInfo();
+                        this.updateRolodexRotation();
+                    }
+                }
+            } catch (e) {
+                console.log('Could not restore session state');
+            }
+        }
+
+        // Saved cases management
+        loadSavedCases() {
+            try {
+                const saved = localStorage.getItem('savedFederalCases');
+                if (saved) {
+                    this.savedCases = JSON.parse(saved);
+                    this.updateSavedCasesDisplay();
+                }
+            } catch (e) {
+                console.log('Could not load saved cases');
+                this.savedCases = [];
+            }
+        }
+
+        saveCasesToStorage() {
+            try {
+                localStorage.setItem('savedFederalCases', JSON.stringify(this.savedCases));
+                this.updateSavedCasesDisplay();
+                this.showNotification('Cases saved to browser storage');
+            } catch (e) {
+                this.showNotification('Could not save cases');
+            }
+        }
+
+        addSavedCase(caseData) {
+            // Check if already saved
+            if (!this.savedCases.find(c => c.id === caseData.id)) {
+                this.savedCases.push({
+                    ...caseData,
+                    savedAt: new Date().toISOString()
+                });
+                this.saveCasesToStorage();
+                this.showNotification('Case saved successfully');
+            } else {
+                this.showNotification('Case already saved');
+            }
+        }
+
+        removeSavedCase(caseId) {
+            this.savedCases = this.savedCases.filter(c => c.id !== caseId);
+            this.saveCasesToStorage();
+            this.showNotification('Case removed from saved list');
+        }
+
+        updateSavedCasesDisplay() {
+            const savedList = document.getElementById('saved-cases-list');
+            const savedCount = document.getElementById('saved-count');
+            
+            savedCount.textContent = this.savedCases.length;
+
+            if (this.savedCases.length === 0) {
+                savedList.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">No saved cases yet</div>';
+                return;
+            }
+
+            savedList.innerHTML = this.savedCases.map(case_ => {
+                const title = case_.title;
+                const vsMatch = title.match(/^(.+?)\s+v\.?\s+(.+)$/i);
+                
+                return `
+                    <div class="saved-case-item" onclick="rolodex.openSavedCase('${case_.id}')">
+                        <button class="saved-case-remove" onclick="event.stopPropagation(); rolodex.removeSavedCase('${case_.id}')" title="Remove case">×</button>
+                        <div class="new-case-number">${case_.id}</div>
+                        <div class="new-case-title">${vsMatch ? `${vsMatch[1]} v. ${vsMatch[2]}` : title}</div>
+                        <div class="new-case-date">${case_.filed_date} • ${case_.court}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        openSavedCase(caseId) {
+            const case_ = this.savedCases.find(c => c.id === caseId);
+            if (case_ && case_.url && case_.url !== '#') {
+                window.open(case_.url, '_blank');
+            } else if (case_) {
+                this.showNotification('No PACER URL available for this case');
+            }
+        }
+
+        // Search functionality
+        setupSearch() {
+            const searchInput = document.getElementById('search-input');
+            const searchResults = document.getElementById('search-results');
+            let searchTimeout;
+
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                const query = e.target.value.toLowerCase().trim();
+                
+                if (query.length < 2) {
+                    searchResults.innerHTML = '';
+                    return;
+                }
+
+                searchTimeout = setTimeout(() => {
+                    this.performSearch(query);
+                }, 200);
+            });
+
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const firstResult = searchResults.querySelector('.search-result-item');
+                    if (firstResult) {
+                        firstResult.click();
+                    }
+                }
+            });
+        }
+
+        performSearch(query) {
+            const searchResults = document.getElementById('search-results');
+            
+            // Search through all cases
+            const matches = this.allCases.filter(case_ => {
+                const searchText = `${case_.id} ${case_.title} ${case_.court} ${case_.case_type}`.toLowerCase();
+                return searchText.includes(query);
+            }).slice(0, 10); // Limit to 10 results
+
+            if (matches.length === 0) {
+                searchResults.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">No matches found</div>';
+                return;
+            }
+
+            searchResults.innerHTML = matches.map(case_ => {
+                const title = case_.title;
+                const vsMatch = title.match(/^(.+?)\s+v\.?\s+(.+)$/i);
+                
+                return `
+                    <div class="search-result-item" onclick="rolodex.jumpToCase('${case_.id}')">
+                        <div class="search-result-case">${case_.id}</div>
+                        <div class="search-result-title">${vsMatch ? `${vsMatch[1]} v. ${vsMatch[2]}` : title}</div>
+                        <div class="search-result-meta">${case_.case_type} • ${case_.court} • ${case_.filed_date}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        jumpToCase(caseId) {
+            // Find the case and its page
+            const caseIndex = this.allCases.findIndex(c => c.id === caseId);
+            if (caseIndex === -1) return;
+
+            const targetPage = Math.floor(caseIndex / this.casesPerPage);
+            const positionInPage = caseIndex % this.casesPerPage;
+            
+            // Navigate to the page
+            this.currentPage = targetPage;
+            this.renderRolodex();
+            this.updatePageInfo();
+            
+            // Rotate to show the specific case at front
+            const targetRotation = -(positionInPage / this.casesPerPage) * 360;
+            this.animateToRotation(targetRotation);
+            
+            // Close search dropdown
+            this.toggleDropdown('search', false);
+            
+            this.saveSessionState();
+        }
+
+        animateToRotation(targetRotation) {
+            const startRotation = this.currentRotation;
+            const deltaRotation = targetRotation - startRotation;
+            const duration = 800;
+            const startTime = Date.now();
+
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Ease-out animation
+                const easeProgress = 1 - Math.pow(1 - progress, 3);
+                
+                this.currentRotation = startRotation + (deltaRotation * easeProgress);
+                this.updateRolodexRotation();
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            };
+            
+            requestAnimationFrame(animate);
+        }
+
+        // Navigation setup
+        setupNavigation() {
+            const savedBtn = document.getElementById('saved-btn');
+            const searchBtn = document.getElementById('search-btn');
+
+            savedBtn.addEventListener('click', () => this.toggleDropdown('saved'));
+            searchBtn.addEventListener('click', () => this.toggleDropdown('search'));
+
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.dropdown') && !e.target.closest('.nav-button')) {
+                    this.closeAllDropdowns();
+                }
+            });
+
+            this.setupSearch();
+        }
+
+        toggleDropdown(type, force = null) {
+            const savedDropdown = document.getElementById('saved-dropdown');
+            const searchDropdown = document.getElementById('search-dropdown');
+            const savedBtn = document.getElementById('saved-btn');
+            const searchBtn = document.getElementById('search-btn');
+
+            if (type === 'saved') {
+                const isOpen = force !== null ? !force : savedDropdown.classList.contains('show');
+                
+                // Close search dropdown
+                searchDropdown.classList.remove('show');
+                searchBtn.classList.remove('active');
+                
+                if (!isOpen) {
+                    savedDropdown.classList.add('show');
+                    savedBtn.classList.add('active');
+                } else {
+                    savedDropdown.classList.remove('show');
+                    savedBtn.classList.remove('active');
+                }
+            } else if (type === 'search') {
+                const isOpen = force !== null ? !force : searchDropdown.classList.contains('show');
+                
+                // Close saved dropdown
+                savedDropdown.classList.remove('show');
+                savedBtn.classList.remove('active');
+                
+                if (!isOpen) {
+                    searchDropdown.classList.add('show');
+                    searchBtn.classList.add('active');
+                    document.getElementById('search-input').focus();
+                } else {
+                    searchDropdown.classList.remove('show');
+                    searchBtn.classList.remove('active');
+                }
+            }
+        }
+
+        closeAllDropdowns() {
+            document.getElementById('saved-dropdown').classList.remove('show');
+            document.getElementById('search-dropdown').classList.remove('show');
+            document.getElementById('saved-btn').classList.remove('active');
+            document.getElementById('search-btn').classList.remove('active');
         }
 
         async loadCases() {
@@ -858,7 +1350,7 @@
                     if (case_.url && case_.url !== '#') {
                         window.open(case_.url, '_blank');
                     } else {
-                        alert('No PACER URL available for this case');
+                        this.showNotification('No PACER URL available for this case');
                     }
                 });
 
@@ -912,6 +1404,8 @@
                 item.addEventListener('click', () => {
                     if (case_.url && case_.url !== '#') {
                         window.open(case_.url, '_blank');
+                    } else {
+                        this.showNotification('No PACER URL available for this case');
                     }
                 });
 
@@ -950,6 +1444,8 @@
 
                 if (Math.abs(currentVelocity) > 0.01) {
                     requestAnimationFrame(animate);
+                } else {
+                    this.saveSessionState();
                 }
             };
 
@@ -965,6 +1461,7 @@
                     this.currentPage--;
                     this.renderRolodex();
                     this.updatePageInfo();
+                    this.saveSessionState();
                 }
             });
 
@@ -973,6 +1470,7 @@
                     this.currentPage++;
                     this.renderRolodex();
                     this.updatePageInfo();
+                    this.saveSessionState();
                 }
             });
         }
@@ -1067,6 +1565,7 @@
                 e.stopImmediatePropagation();
                 this.currentRotation += e.deltaY * 0.15;
                 this.updateRolodexRotation();
+                this.saveSessionState();
             }, { passive: false });
         }
 
@@ -1106,6 +1605,7 @@
                     <button onclick="rolodex.copyToClipboard('${caseData.id}', 'Case Number')">Copy Case #</button>
                     <button onclick="rolodex.copyToClipboard('${caseData.title.replace(/'/g, "\\'")}', 'Case Title')">Copy Title</button>
                     <button onclick="rolodex.copyToClipboard('${caseData.court}', 'Court')">Copy Court</button>
+                    <button onclick="rolodex.addSavedCase(rolodex.selectedCaseData); rolodex.dismissMenu();">+ Save Case</button>
                     <button onclick="window.open('${caseData.url}', '_blank'); rolodex.dismissMenu();">Open PACER</button>
                 </div>
             `;
@@ -1172,7 +1672,7 @@
             setInterval(() => {
                 if (Math.random() > 0.95) {
                     const char = document.createElement('div');
-                    char.textContent = chars.charAt(Math.floor(Math.random() * chars.length));
+                    char.textContent = chars.charAt(Math.random() * chars.length);
                     char.style.cssText = `
                         position: absolute;
                         color: #003300;
