@@ -691,7 +691,7 @@
             width: 100%;
             height: 100%;
             z-index: -1;
-            opacity: 1;
+            opacity: 0.15;
             pointer-events: none;
         }
 
@@ -1950,7 +1950,7 @@
             console.log('Setting up Matrix rain effect...');
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-            const columns = Math.floor(window.innerWidth / 20); // One column every 20px
+            const columns = Math.floor(window.innerWidth / 60); // One column every 60px (sparse)
             const drops = [];
             const columnTypes = []; // Track behavior type for each column
             const staticChars = []; // Store static characters for non-phasing columns
@@ -1983,7 +1983,7 @@
 
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = 'rgba(0, 0, 0, 0)'; // Transparent background
-            ctx.font = '16px monospace';
+            ctx.font = '14px monospace';
 
             let frameCount = 0;
 
@@ -1992,12 +1992,12 @@
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                ctx.font = '16px monospace';
+                ctx.font = '14px monospace';
                 frameCount++;
 
                 // Draw the matrix rain
                 for (let i = 0; i < drops.length; i++) {
-                    const x = i * 20;
+                    const x = i * 60;
                     const y = drops[i] * 20;
                     const colType = columnTypes[i];
 
@@ -2019,15 +2019,15 @@
                         headChar = chars[Math.floor(Math.random() * chars.length)];
                     }
 
-                    // Leading character (head of column) - bright white with glow
-                    ctx.fillStyle = '#ffffff';
+                    // Leading character (head of column) - subtle glow
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
                     ctx.shadowColor = '#00ff00';
-                    ctx.shadowBlur = 10;
+                    ctx.shadowBlur = 5;
                     ctx.fillText(headChar, x, y);
                     ctx.shadowBlur = 0;
 
-                    // Trail characters
-                    for (let j = 1; j < 8; j++) {
+                    // Trail characters (shorter trail)
+                    for (let j = 1; j < 5; j++) {
                         const trailY = y - j * 20;
                         if (trailY > 0) {
                             let trailChar;
@@ -2048,9 +2048,9 @@
                                 trailChar = chars[Math.floor(Math.random() * chars.length)];
                             }
 
-                            // Random intensity for depth
-                            const intensity = Math.floor((8 - j) / 8 * 255);
-                            ctx.fillStyle = `rgb(0, ${intensity}, 0)`;
+                            // Subtle intensity for depth
+                            const intensity = Math.floor((5 - j) / 5 * 180);
+                            ctx.fillStyle = `rgba(0, ${intensity}, 0, 0.6)`;
                             ctx.fillText(trailChar, x, trailY);
                         }
                     }
@@ -2069,8 +2069,8 @@
                 }
             }
 
-            // Draw at 30 FPS for smooth rapid character phasing
-            setInterval(drawMatrixRain, 33);
+            // Draw at 20 FPS for subtle effect
+            setInterval(drawMatrixRain, 50);
 
             console.log('Matrix rain initialized with ' + columns + ' columns');
         }
