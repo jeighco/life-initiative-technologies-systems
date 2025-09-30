@@ -435,6 +435,19 @@
             transform-origin: center center;
             backface-visibility: hidden;
             left: 50%;
+            border-left-width: 5px;
+        }
+
+        .card.criminal {
+            border-left-color: #ff0000;
+        }
+
+        .card.civil {
+            border-left-color: #0088ff;
+        }
+
+        .card.other {
+            border-left-color: #00ff00;
         }
 
         @media (max-width: 768px) and (orientation: portrait) {
@@ -777,6 +790,9 @@
     <div class="top-nav" id="top-nav">
         <button class="nav-button" id="saved-btn" title="Saved Cases">📁</button>
         <button class="nav-button" id="search-btn" title="Search Cases">🔍</button>
+        <button class="nav-button" id="cost-btn" title="PACER Cost Tracker">💲</button>
+        <button class="nav-button" id="filter-btn" title="Filter Cases">🔽</button>
+        <button class="nav-button" id="sort-btn" title="Sort Cases">⇅</button>
     </div>
 
     <!-- Search Dropdown -->
@@ -791,6 +807,53 @@
         <div class="dropdown-header">SAVED CASES (<span id="saved-count">0</span>)</div>
         <div class="saved-cases-list" id="saved-cases-list">
             <div style="text-align: center; color: #666; padding: 20px;">No saved cases yet</div>
+        </div>
+    </div>
+
+    <!-- Cost Tracker Dropdown -->
+    <div class="dropdown" id="cost-dropdown">
+        <div class="dropdown-header">PACER COST TRACKER</div>
+        <div style="padding: 20px; text-align: center; color: #00ff00;">
+            <p>Cost tracking coming soon...</p>
+            <p style="font-size: 10px; color: #666; margin-top: 10px;">$0.10 per page • Free under $30/quarter</p>
+        </div>
+    </div>
+
+    <!-- Filter Dropdown -->
+    <div class="dropdown" id="filter-dropdown">
+        <div class="dropdown-header">FILTER CASES</div>
+        <div style="padding: 15px;">
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #00ff00;">Case Type:</label>
+                <select id="filter-case-type" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.7); border: 1px solid #00ff00; color: #00ff00; border-radius: 4px;">
+                    <option value="all">All Types</option>
+                    <option value="criminal">Criminal</option>
+                    <option value="civil">Civil</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #00ff00;">District:</label>
+                <input type="text" id="filter-district" placeholder="Enter district name..." style="width: calc(100% - 16px); padding: 8px; background: rgba(0,0,0,0.7); border: 1px solid #00ff00; color: #00ff00; border-radius: 4px;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #00ff00;">Date Range:</label>
+                <input type="date" id="filter-date-from" style="width: calc(50% - 10px); padding: 8px; background: rgba(0,0,0,0.7); border: 1px solid #00ff00; color: #00ff00; border-radius: 4px; margin-right: 5px;">
+                <input type="date" id="filter-date-to" style="width: calc(50% - 10px); padding: 8px; background: rgba(0,0,0,0.7); border: 1px solid #00ff00; color: #00ff00; border-radius: 4px;">
+            </div>
+            <button onclick="rolodex.applyFilters()" style="width: 100%; padding: 10px; background: rgba(0,255,0,0.2); border: 1px solid #00ff00; color: #00ff00; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace;">Apply Filters</button>
+            <button onclick="rolodex.clearFilters()" style="width: 100%; padding: 10px; margin-top: 5px; background: rgba(255,0,0,0.2); border: 1px solid #ff0000; color: #ff0000; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace;">Clear Filters</button>
+        </div>
+    </div>
+
+    <!-- Sort Dropdown -->
+    <div class="dropdown" id="sort-dropdown">
+        <div class="dropdown-header">SORT CASES</div>
+        <div class="copy-buttons" style="padding: 15px; flex-direction: column;">
+            <button onclick="rolodex.applySortOption('newest')" style="width: 100%; margin: 5px 0;">📅 Newest First (Default)</button>
+            <button onclick="rolodex.applySortOption('oldest')" style="width: 100%; margin: 5px 0;">📅 Oldest First</button>
+            <button onclick="rolodex.applySortOption('alphabetical')" style="width: 100%; margin: 5px 0;">🔤 Alphabetical</button>
+            <button onclick="rolodex.applySortOption('district')" style="width: 100%; margin: 5px 0;">🏛️ By District</button>
         </div>
     </div>
 
@@ -1085,9 +1148,15 @@
         setupNavigation() {
             const savedBtn = document.getElementById('saved-btn');
             const searchBtn = document.getElementById('search-btn');
+            const costBtn = document.getElementById('cost-btn');
+            const filterBtn = document.getElementById('filter-btn');
+            const sortBtn = document.getElementById('sort-btn');
 
             savedBtn.addEventListener('click', () => this.toggleDropdown('saved'));
             searchBtn.addEventListener('click', () => this.toggleDropdown('search'));
+            costBtn.addEventListener('click', () => this.toggleDropdown('cost'));
+            filterBtn.addEventListener('click', () => this.toggleDropdown('filter'));
+            sortBtn.addEventListener('click', () => this.toggleDropdown('sort'));
 
             // Close dropdowns when clicking outside
             document.addEventListener('click', (e) => {
@@ -1100,48 +1169,38 @@
         }
 
         toggleDropdown(type, force = null) {
-            const savedDropdown = document.getElementById('saved-dropdown');
-            const searchDropdown = document.getElementById('search-dropdown');
-            const savedBtn = document.getElementById('saved-btn');
-            const searchBtn = document.getElementById('search-btn');
+            const dropdowns = ['saved', 'search', 'cost', 'filter', 'sort'];
 
-            if (type === 'saved') {
-                const isOpen = force !== null ? !force : savedDropdown.classList.contains('show');
-                
-                // Close search dropdown
-                searchDropdown.classList.remove('show');
-                searchBtn.classList.remove('active');
-                
-                if (!isOpen) {
-                    savedDropdown.classList.add('show');
-                    savedBtn.classList.add('active');
+            // Close all dropdowns except the one being toggled
+            dropdowns.forEach(dropdownType => {
+                const dropdown = document.getElementById(`${dropdownType}-dropdown`);
+                const btn = document.getElementById(`${dropdownType}-btn`);
+
+                if (dropdownType === type) {
+                    const isOpen = force !== null ? !force : dropdown.classList.contains('show');
+                    if (!isOpen) {
+                        dropdown.classList.add('show');
+                        btn.classList.add('active');
+                        if (type === 'search') {
+                            document.getElementById('search-input').focus();
+                        }
+                    } else {
+                        dropdown.classList.remove('show');
+                        btn.classList.remove('active');
+                    }
                 } else {
-                    savedDropdown.classList.remove('show');
-                    savedBtn.classList.remove('active');
+                    dropdown.classList.remove('show');
+                    btn.classList.remove('active');
                 }
-            } else if (type === 'search') {
-                const isOpen = force !== null ? !force : searchDropdown.classList.contains('show');
-                
-                // Close saved dropdown
-                savedDropdown.classList.remove('show');
-                savedBtn.classList.remove('active');
-                
-                if (!isOpen) {
-                    searchDropdown.classList.add('show');
-                    searchBtn.classList.add('active');
-                    document.getElementById('search-input').focus();
-                } else {
-                    searchDropdown.classList.remove('show');
-                    searchBtn.classList.remove('active');
-                }
-            }
+            });
         }
 
         closeAllDropdowns() {
-            document.getElementById('saved-dropdown').classList.remove('show');
-            document.getElementById('search-dropdown').classList.remove('show');
-            document.getElementById('saved-btn').classList.remove('active');
-            document.getElementById('search-btn').classList.remove('active');
+            const dropdowns = ['saved', 'search', 'cost', 'filter', 'sort'];
+            dropdowns.forEach(type => {
+                document.getElementById(`${type}-dropdown`).classList.remove('show');
+                document.getElementById(`${type}-btn`).classList.remove('active');
+            });
         }
 
         async loadCases() {
@@ -1170,8 +1229,9 @@
                         url: case_.pacer_url || '#'
                     }));
 
-                    // Combine all cases
+                    // Combine all cases and sort by filing date (newest first)
                     this.allCases = [...regularCases, ...partyCases];
+                    this.sortCasesByDate();
                     this.newCases = this.getRecentCases();
                 } else {
                     console.log('Could not load enhanced_federal_report.json, using demo data');
@@ -1187,6 +1247,43 @@
             this.totalPages = Math.ceil(this.allCases.length / this.casesPerPage);
             this.renderInterface();
             this.updateStats();
+        }
+
+        sortCasesByDate(ascending = false) {
+            this.allCases.sort((a, b) => {
+                const dateA = new Date(a.filed_date);
+                const dateB = new Date(b.filed_date);
+                return ascending ? dateA - dateB : dateB - dateA;
+            });
+        }
+
+        sortCasesAlphabetically() {
+            this.allCases.sort((a, b) => a.title.localeCompare(b.title));
+        }
+
+        sortCasesByDistrict() {
+            this.allCases.sort((a, b) => a.court.localeCompare(b.court));
+        }
+
+        applySortOption(option) {
+            switch(option) {
+                case 'newest':
+                    this.sortCasesByDate(false);
+                    break;
+                case 'oldest':
+                    this.sortCasesByDate(true);
+                    break;
+                case 'alphabetical':
+                    this.sortCasesAlphabetically();
+                    break;
+                case 'district':
+                    this.sortCasesByDistrict();
+                    break;
+            }
+            this.currentPage = 0;
+            this.renderRolodex();
+            this.updatePageInfo();
+            this.saveSessionState();
         }
 
         getFederalCaseData() {
@@ -1297,7 +1394,11 @@
 
             pageCases.forEach((case_, index) => {
                 const card = document.createElement('div');
-                card.className = 'card';
+
+                // Add case type class for color coding
+                const caseTypeClass = case_.case_type.toLowerCase().includes('cr') ? 'criminal' :
+                                     case_.case_type.toLowerCase().includes('cv') ? 'civil' : 'other';
+                card.className = `card ${caseTypeClass}`;
 
                 const angle = (index / pageCases.length) * 360;
                 let radius = 150;
@@ -1605,6 +1706,7 @@
                     <button onclick="rolodex.copyToClipboard('${caseData.id}', 'Case Number')">Copy Case #</button>
                     <button onclick="rolodex.copyToClipboard('${caseData.title.replace(/'/g, "\\'")}', 'Case Title')">Copy Title</button>
                     <button onclick="rolodex.copyToClipboard('${caseData.court}', 'Court')">Copy Court</button>
+                    <button onclick="rolodex.addToSummaryQueue(rolodex.selectedCaseData); rolodex.dismissMenu();">📝 Summary Queue</button>
                     <button onclick="rolodex.addSavedCase(rolodex.selectedCaseData); rolodex.dismissMenu();">+ Save Case</button>
                     <button onclick="window.open('${caseData.url}', '_blank'); rolodex.dismissMenu();">Open PACER</button>
                 </div>
@@ -1651,6 +1753,97 @@
                 this.showNotification(`${label} copied to clipboard`);
                 this.dismissMenu(); // Close menu after action
             });
+        }
+
+        addToSummaryQueue(caseData) {
+            // Get existing summary queue from localStorage
+            let summaryQueue = [];
+            try {
+                const saved = localStorage.getItem('summaryQueue');
+                if (saved) {
+                    summaryQueue = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.log('Could not load summary queue');
+            }
+
+            // Add case if not already in queue
+            if (!summaryQueue.find(c => c.id === caseData.id)) {
+                summaryQueue.push({
+                    ...caseData,
+                    addedAt: new Date().toISOString()
+                });
+                localStorage.setItem('summaryQueue', JSON.stringify(summaryQueue));
+                this.showNotification(`Added to Summary Queue (${summaryQueue.length} total)`);
+            } else {
+                this.showNotification('Case already in Summary Queue');
+            }
+        }
+
+        applyFilters() {
+            const caseType = document.getElementById('filter-case-type').value;
+            const district = document.getElementById('filter-district').value.toLowerCase();
+            const dateFrom = document.getElementById('filter-date-from').value;
+            const dateTo = document.getElementById('filter-date-to').value;
+
+            // Filter allCases based on criteria
+            let filtered = [...this.allCases];
+
+            if (caseType !== 'all') {
+                filtered = filtered.filter(c => {
+                    const type = c.case_type.toLowerCase();
+                    if (caseType === 'criminal') return type.includes('cr');
+                    if (caseType === 'civil') return type.includes('cv');
+                    return !type.includes('cr') && !type.includes('cv');
+                });
+            }
+
+            if (district) {
+                filtered = filtered.filter(c => c.court.toLowerCase().includes(district));
+            }
+
+            if (dateFrom) {
+                filtered = filtered.filter(c => c.filed_date >= dateFrom);
+            }
+
+            if (dateTo) {
+                filtered = filtered.filter(c => c.filed_date <= dateTo);
+            }
+
+            // Store original if not already stored
+            if (!this.allCasesOriginal) {
+                this.allCasesOriginal = [...this.allCases];
+            }
+
+            this.allCases = filtered;
+            this.totalPages = Math.ceil(this.allCases.length / this.casesPerPage);
+            this.currentPage = 0;
+            this.renderRolodex();
+            this.updatePageInfo();
+            this.updateStats();
+            this.closeAllDropdowns();
+            this.showNotification(`Showing ${filtered.length} filtered cases`);
+        }
+
+        clearFilters() {
+            if (this.allCasesOriginal) {
+                this.allCases = [...this.allCasesOriginal];
+                this.allCasesOriginal = null;
+            }
+
+            // Reset filter inputs
+            document.getElementById('filter-case-type').value = 'all';
+            document.getElementById('filter-district').value = '';
+            document.getElementById('filter-date-from').value = '';
+            document.getElementById('filter-date-to').value = '';
+
+            this.totalPages = Math.ceil(this.allCases.length / this.casesPerPage);
+            this.currentPage = 0;
+            this.renderRolodex();
+            this.updatePageInfo();
+            this.updateStats();
+            this.closeAllDropdowns();
+            this.showNotification('Filters cleared');
         }
 
         showNotification(message) {
