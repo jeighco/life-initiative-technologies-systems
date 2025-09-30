@@ -1960,9 +1960,8 @@
             for (let i = 0; i < columns; i++) {
                 drops[i] = Math.floor(Math.random() * -100); // Start at random negative positions
 
-                // Spread columns across screen with random offset within their section
-                const sectionWidth = window.innerWidth / columns;
-                columnX[i] = Math.floor(i * sectionWidth + Math.random() * (sectionWidth - 20));
+                // Random x position across entire screen width
+                columnX[i] = Math.floor(Math.random() * (window.innerWidth - 30));
 
                 // Assign column behavior: 0=static, 1=slow cycle, 2=rapid phase
                 const rand = Math.random();
@@ -2063,6 +2062,8 @@
                     // Reset drop to top randomly after it goes off screen
                     if (y > canvas.height && Math.random() > 0.975) {
                         drops[i] = 0;
+                        // Randomize x position for variety
+                        columnX[i] = Math.floor(Math.random() * (canvas.width - 30));
                         // Clear static chars for this column when it resets
                         if (colType === 0) {
                             staticChars[i] = {};
