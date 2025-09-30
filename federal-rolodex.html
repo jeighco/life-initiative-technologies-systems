@@ -979,9 +979,63 @@
             this.savedCases = [];
             this.searchResults = [];
             this.mergeStats = null;  // Store merge statistics from JSON
+            this.lastHapticRotation = 0;  // Track for haptic feedback
 
+            this.setupHaptics();
             this.init();
             window.rolodex = this; // Make accessible for popup buttons
+        }
+
+        setupHaptics() {
+            // Create audio context for tick sounds
+            try {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) {
+                console.log('Web Audio not supported');
+            }
+
+            // Check if vibration API is supported
+            this.hasVibration = 'vibrate' in navigator;
+        }
+
+        playTick() {
+            if (!this.audioContext) return;
+
+            // Play audio tick (short click sound)
+            const oscillator = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(1200, this.audioContext.currentTime);
+
+            gainNode.gain.setValueAtTime(0.15, this.audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.02);
+
+            oscillator.start(this.audioContext.currentTime);
+            oscillator.stop(this.audioContext.currentTime + 0.02);
+        }
+
+        triggerHaptic() {
+            // Vibrate for a short pulse (10ms) - feels like a physical click
+            if (this.hasVibration) {
+                navigator.vibrate(10);
+            }
+        }
+
+        checkRotationTick() {
+            // Trigger haptic/audio every ~36 degrees (10 ticks per full rotation)
+            const tickInterval = 36;
+            const currentTick = Math.floor(Math.abs(this.currentRotation) / tickInterval);
+            const lastTick = Math.floor(Math.abs(this.lastHapticRotation) / tickInterval);
+
+            if (currentTick !== lastTick) {
+                this.playTick();
+                this.triggerHaptic();
+                this.lastHapticRotation = this.currentRotation;
+            }
         }
 
         async init() {
@@ -1601,6 +1655,9 @@
         updateRolodexRotation() {
             const rolodex = document.getElementById('rolodex');
             rolodex.style.transform = `translate(-50%, -50%) rotateX(${this.currentRotation}deg)`;
+
+            // Check if we should play tick sound/haptic
+            this.checkRotationTick();
         }
 
         startMomentum() {
