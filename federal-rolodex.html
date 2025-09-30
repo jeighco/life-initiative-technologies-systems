@@ -454,16 +454,10 @@
             .card {
                 width: 85vw;
                 max-width: 450px;
-                min-height: 72px;
-                height: auto;
-                padding: 8px 13px;
+                height: 63px;
+                padding: 0 13px;
                 left: 50%;
                 transform: translateX(-50%);
-                align-items: flex-start;
-            }
-
-            .card-content {
-                align-items: flex-start;
             }
         }
 
@@ -538,7 +532,7 @@
 
             .case-meta {
                 font-size: 10px;
-                gap: 8px;
+                gap: 10px;
             }
         }
 
@@ -554,7 +548,7 @@
 
             .case-meta {
                 font-size: 9px;
-                gap: 8px;
+                gap: 10px;
             }
         }
 
@@ -578,12 +572,22 @@
             font-size: 12px;
             display: flex;
             gap: 15px;
-            flex-wrap: wrap;
             align-items: center;
+            white-space: nowrap;
+            overflow: hidden;
         }
 
-        .case-meta span {
-            white-space: nowrap;
+        .case-meta span:nth-child(2) {
+            /* Location name - allow to truncate */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+            flex-shrink: 1;
+        }
+
+        .case-meta span:nth-child(1),
+        .case-meta span:nth-child(3) {
+            /* Case type and date - never shrink */
             flex-shrink: 0;
         }
 
