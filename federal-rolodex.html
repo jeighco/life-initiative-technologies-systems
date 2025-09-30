@@ -1950,7 +1950,7 @@
             console.log('Setting up Matrix rain effect...');
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-            const columns = 3 + Math.floor(Math.random() * 4); // Random 3-6 columns each load
+            const columns = 1 + Math.floor(Math.random() * 3); // Random 1-3 columns each load (10% frequency)
             const drops = [];
             const columnTypes = []; // Track behavior type for each column
             const staticChars = []; // Store static characters for non-phasing columns
