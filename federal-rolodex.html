@@ -1947,45 +1947,63 @@
                 return;
             }
 
-            console.log('Setting up matrix background with 50 linger chars and drops...');
+            console.log('Setting up Matrix rain effect...');
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-            // Create static lingering characters (very sparse)
-            for (let i = 0; i < 100; i++) {
-                const char = document.createElement('div');
-                char.className = 'matrix-char linger';
-                char.textContent = chars.charAt(Math.floor(Math.random() * chars.length));
-                char.style.left = Math.random() * 100 + '%';
-                char.style.top = Math.random() * 100 + '%';
-                char.style.animation = `matrix-twinkle ${5 + Math.random() * 10}s ease-in-out infinite`;
-                char.style.animationDelay = Math.random() * 5 + 's';
-                matrixBg.appendChild(char);
+            const columns = Math.floor(window.innerWidth / 20); // One column every 20px
+            const drops = [];
+
+            // Initialize drops array - each column has a y position
+            for (let i = 0; i < columns; i++) {
+                drops[i] = Math.floor(Math.random() * -100); // Start at random negative positions
             }
 
-            console.log(`Added ${matrixBg.children.length} linger characters to matrix background`);
+            const canvas = document.createElement('canvas');
+            canvas.style.position = 'absolute';
+            canvas.style.top = '0';
+            canvas.style.left = '0';
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            matrixBg.appendChild(canvas);
 
-            // Dropping characters (occasional)
-            setInterval(() => {
-                if (Math.random() > 0.94) { // 6% chance
-                    const char = document.createElement('div');
-                    char.className = 'matrix-char drop';
-                    char.textContent = chars.charAt(Math.floor(Math.random() * chars.length));
-                    char.style.left = Math.random() * 100 + '%';
-                    char.style.top = '-20px';
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'rgba(0, 0, 0, 0)'; // Transparent background
+            ctx.font = '16px monospace';
 
-                    // Vary fall speed for natural effect
-                    const duration = 5 + Math.random() * 8; // 5-13 seconds
-                    char.style.animation = `matrix-fall ${duration}s linear forwards`;
+            function drawMatrixRain() {
+                // Fade effect - creates the trail
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                    matrixBg.appendChild(char);
+                ctx.fillStyle = '#00ff00';
+                ctx.font = '16px monospace';
 
-                    setTimeout(() => {
-                        if (char.parentNode) {
-                            char.parentNode.removeChild(char);
-                        }
-                    }, duration * 1000);
+                // Draw the matrix rain
+                for (let i = 0; i < drops.length; i++) {
+                    // Pick random character
+                    const text = chars[Math.floor(Math.random() * chars.length)];
+                    const x = i * 20;
+                    const y = drops[i] * 20;
+
+                    // Draw the character
+                    ctx.fillText(text, x, y);
+
+                    // Reset drop to top randomly after it goes off screen
+                    if (y > canvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+
+                    // Move drop down
+                    drops[i]++;
                 }
-            }, 200);
+            }
+
+            // Draw at ~20 FPS for subtle effect
+            setInterval(drawMatrixRain, 50);
+
+            console.log('Matrix rain initialized with ' + columns + ' columns');
         }
     }
 
