@@ -1950,7 +1950,7 @@
             console.log('Setting up Matrix rain effect...');
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-            const columns = 1 + Math.floor(Math.random() * 3); // Random 1-3 columns each load (10% frequency)
+            const columns = Math.random() < 0.7 ? 1 : 2; // Random 1-2 columns (70% chance of 1, 30% chance of 2) - 6% frequency
             const drops = [];
             const columnTypes = []; // Track behavior type for each column
             const staticChars = []; // Store static characters for non-phasing columns
@@ -2000,8 +2000,8 @@
             let frameCount = 0;
 
             function drawMatrixRain() {
-                // Fade effect - creates the trail
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                // Fade effect - creates the trail that fully disappears
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                 ctx.font = '14px monospace';
