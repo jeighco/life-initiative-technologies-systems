@@ -1972,23 +1972,45 @@
             ctx.fillStyle = 'rgba(0, 0, 0, 0)'; // Transparent background
             ctx.font = '16px monospace';
 
+            // Track all character positions that exist on screen for rapid phasing
+            const activeChars = {};
+
             function drawMatrixRain() {
                 // Fade effect - creates the trail
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                ctx.fillStyle = '#00ff00';
                 ctx.font = '16px monospace';
 
                 // Draw the matrix rain
                 for (let i = 0; i < drops.length; i++) {
-                    // Pick random character
-                    const text = chars[Math.floor(Math.random() * chars.length)];
                     const x = i * 20;
                     const y = drops[i] * 20;
 
-                    // Draw the character
-                    ctx.fillText(text, x, y);
+                    // Leading character (head of column) - bright white with glow
+                    // This character rapidly phases through the character set every frame
+                    const headChar = chars[Math.floor(Math.random() * chars.length)];
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowColor = '#00ff00';
+                    ctx.shadowBlur = 10;
+                    ctx.fillText(headChar, x, y);
+                    ctx.shadowBlur = 0;
+
+                    // Trail characters - each one ALSO rapidly phases
+                    for (let j = 1; j < 8; j++) {
+                        const trailY = y - j * 20;
+                        if (trailY > 0) {
+                            // Each trail character rapidly cycles through chars
+                            const trailChar = chars[Math.floor(Math.random() * chars.length)];
+
+                            // Random intensity for depth
+                            const intensity = Math.floor((8 - j) / 8 * 255);
+                            ctx.fillStyle = `rgb(0, ${intensity}, 0)`;
+
+                            // Draw the rapidly phasing character
+                            ctx.fillText(trailChar, x, trailY);
+                        }
+                    }
 
                     // Reset drop to top randomly after it goes off screen
                     if (y > canvas.height && Math.random() > 0.975) {
@@ -2000,8 +2022,8 @@
                 }
             }
 
-            // Draw at ~20 FPS for subtle effect
-            setInterval(drawMatrixRain, 50);
+            // Draw at 30 FPS for smooth rapid character phasing
+            setInterval(drawMatrixRain, 33);
 
             console.log('Matrix rain initialized with ' + columns + ' columns');
         }
