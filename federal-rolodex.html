@@ -1066,17 +1066,26 @@
         }
 
         triggerHaptic() {
-            // Try iOS Safari haptic first (works on iPhone Safari 17.4+)
+            // Force try all haptic methods regardless of detection
+
+            // Try direct vibration call (sometimes works even when detection fails)
+            try {
+                if (window.navigator && window.navigator.vibrate) {
+                    window.navigator.vibrate(30); // Single strong pulse
+                }
+            } catch (e) {}
+
+            // Try iOS checkbox switch
             if (this.hasIOSHaptic) {
                 this.triggerIOSHaptic();
-                return;
             }
 
-            // Fallback to Vibration API (Android and some browsers)
-            // Pattern: [vibrate, pause, vibrate] creates sharper "click" sensation
-            if (this.hasVibration) {
-                navigator.vibrate([15, 5, 10]); // Sharp double-tap pattern
-            }
+            // Try webkit vibrate
+            try {
+                if (window.navigator && window.navigator.webkitVibrate) {
+                    window.navigator.webkitVibrate(30);
+                }
+            } catch (e) {}
         }
 
         checkRotationTick() {
