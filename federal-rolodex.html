@@ -532,6 +532,7 @@
 
             .case-meta {
                 font-size: 10px;
+                gap: 8px;
             }
         }
 
@@ -547,6 +548,7 @@
 
             .case-meta {
                 font-size: 9px;
+                gap: 8px;
             }
         }
 
@@ -570,6 +572,13 @@
             font-size: 12px;
             display: flex;
             gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .case-meta span {
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .new-cases-container {
