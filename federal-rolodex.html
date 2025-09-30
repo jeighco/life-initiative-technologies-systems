@@ -691,7 +691,23 @@
             width: 100%;
             height: 100%;
             z-index: -1;
-            opacity: 0.1;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        .matrix-char {
+            position: absolute;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: 300;
+        }
+
+        .matrix-char.drop {
+            color: rgba(0, 255, 0, 0.25);
+        }
+
+        .matrix-char.linger {
+            color: rgba(0, 255, 0, 0.08);
         }
 
         .loading-text {
@@ -710,9 +726,37 @@
         }
 
         @keyframes matrix-fall {
-            to {
+            0% {
+                transform: translateY(0);
+                opacity: 0;
+            }
+            5% {
+                opacity: 1;
+            }
+            95% {
+                opacity: 0.5;
+            }
+            100% {
                 transform: translateY(100vh);
                 opacity: 0;
+            }
+        }
+
+        @keyframes matrix-twinkle {
+            0%, 100% {
+                opacity: 0.08;
+            }
+            50% {
+                opacity: 0.25;
+            }
+        }
+
+        @keyframes matrix-fade-in {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 0.08;
             }
         }
 
@@ -1896,21 +1940,32 @@
 
         setupMatrixBackground() {
             const matrixBg = document.getElementById('matrix-bg');
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
+            // Create static lingering characters (very sparse)
+            for (let i = 0; i < 30; i++) {
+                const char = document.createElement('div');
+                char.className = 'matrix-char linger';
+                char.textContent = chars.charAt(Math.floor(Math.random() * chars.length));
+                char.style.left = Math.random() * 100 + '%';
+                char.style.top = Math.random() * 100 + '%';
+                char.style.animation = `matrix-twinkle ${5 + Math.random() * 10}s ease-in-out infinite`;
+                char.style.animationDelay = Math.random() * 5 + 's';
+                matrixBg.appendChild(char);
+            }
+
+            // Dropping characters (occasional)
             setInterval(() => {
-                if (Math.random() > 0.95) {
+                if (Math.random() > 0.97) { // Very sparse - 3% chance
                     const char = document.createElement('div');
-                    char.textContent = chars.charAt(Math.random() * chars.length);
-                    char.style.cssText = `
-                        position: absolute;
-                        color: #003300;
-                        font-family: 'Courier New', monospace;
-                        font-size: 12px;
-                        left: ${Math.random() * 100}%;
-                        top: -20px;
-                        animation: matrix-fall 3s linear forwards;
-                    `;
+                    char.className = 'matrix-char drop';
+                    char.textContent = chars.charAt(Math.floor(Math.random() * chars.length));
+                    char.style.left = Math.random() * 100 + '%';
+                    char.style.top = '-20px';
+
+                    // Vary fall speed for natural effect
+                    const duration = 5 + Math.random() * 8; // 5-13 seconds
+                    char.style.animation = `matrix-fall ${duration}s linear forwards`;
 
                     matrixBg.appendChild(char);
 
@@ -1918,9 +1973,9 @@
                         if (char.parentNode) {
                             char.parentNode.removeChild(char);
                         }
-                    }, 3000);
+                    }, duration * 1000);
                 }
-            }, 100);
+            }, 200);
         }
     }
 
