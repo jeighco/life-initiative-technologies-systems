@@ -1940,6 +1940,12 @@
 
         setupMatrixBackground() {
             const matrixBg = document.getElementById('matrix-bg');
+            if (!matrixBg) {
+                console.error('Matrix background element not found!');
+                return;
+            }
+
+            console.log('Setting up matrix background with 50 linger chars and drops...');
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
             // Create static lingering characters (very sparse)
@@ -1953,6 +1959,8 @@
                 char.style.animationDelay = Math.random() * 5 + 's';
                 matrixBg.appendChild(char);
             }
+
+            console.log(`Added ${matrixBg.children.length} linger characters to matrix background`);
 
             // Dropping characters (occasional)
             setInterval(() => {
