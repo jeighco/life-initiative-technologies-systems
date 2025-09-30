@@ -1950,7 +1950,7 @@
             console.log('Setting up Matrix rain effect...');
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-            const columns = Math.floor(window.innerWidth / 1300); // One column every 1300px (10% frequency)
+            const columns = Math.floor(window.innerWidth / 330); // One column every 330px (30% frequency)
             const drops = [];
             const columnTypes = []; // Track behavior type for each column
             const staticChars = []; // Store static characters for non-phasing columns
@@ -1997,7 +1997,7 @@
 
                 // Draw the matrix rain
                 for (let i = 0; i < drops.length; i++) {
-                    const x = i * 1300;
+                    const x = i * 330;
                     const y = drops[i] * 20;
                     const colType = columnTypes[i];
 
