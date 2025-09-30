@@ -996,6 +996,46 @@
 
             // Check if vibration API is supported
             this.hasVibration = 'vibrate' in navigator;
+
+            // Check if iOS Safari switch haptic is supported (Safari 17.4+)
+            this.hasIOSHaptic = this.checkIOSSwitchSupport();
+        }
+
+        checkIOSSwitchSupport() {
+            // Test if iOS switch checkbox haptic is supported
+            try {
+                const test = document.createElement('input');
+                test.type = 'checkbox';
+                test.setAttribute('switch', '');
+                return test.type === 'checkbox';
+            } catch (e) {
+                return false;
+            }
+        }
+
+        triggerIOSHaptic() {
+            // iOS Safari 17.4+ hack: create invisible checkbox switch and toggle it
+            // The native switch has haptic feedback built-in
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.setAttribute('switch', '');
+            checkbox.style.position = 'absolute';
+            checkbox.style.opacity = '0';
+            checkbox.style.pointerEvents = 'none';
+            checkbox.style.width = '0';
+            checkbox.style.height = '0';
+
+            document.body.appendChild(checkbox);
+
+            // Toggle to trigger haptic
+            checkbox.checked = true;
+
+            // Clean up immediately
+            setTimeout(() => {
+                if (checkbox.parentNode) {
+                    checkbox.parentNode.removeChild(checkbox);
+                }
+            }, 10);
         }
 
         playTick() {
@@ -1019,7 +1059,13 @@
         }
 
         triggerHaptic() {
-            // Stronger vibration pattern for noticeable feedback
+            // Try iOS Safari haptic first (works on iPhone Safari 17.4+)
+            if (this.hasIOSHaptic) {
+                this.triggerIOSHaptic();
+                return;
+            }
+
+            // Fallback to Vibration API (Android and some browsers)
             // Pattern: [vibrate, pause, vibrate] creates sharper "click" sensation
             if (this.hasVibration) {
                 navigator.vibrate([15, 5, 10]); // Sharp double-tap pattern
