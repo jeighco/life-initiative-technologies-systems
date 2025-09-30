@@ -1950,18 +1950,26 @@
             console.log('Setting up Matrix rain effect...');
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-            const columns = Math.max(3, Math.floor(window.innerWidth / 500)); // One column every 500px (20% frequency), minimum 3 columns
+            const columns = 3 + Math.floor(Math.random() * 4); // Random 3-6 columns each load
             const drops = [];
             const columnTypes = []; // Track behavior type for each column
             const staticChars = []; // Store static characters for non-phasing columns
             const columnX = []; // Store x position for each column
+            const columnSpeed = []; // Store fall speed for each column
+            const trailLength = []; // Store trail length for each column
 
-            // Initialize drops array - each column has a y position, x position, and behavior type
+            // Initialize drops array - each column has unique random properties
             for (let i = 0; i < columns; i++) {
-                drops[i] = Math.floor(Math.random() * -100); // Start at random negative positions
+                drops[i] = Math.floor(Math.random() * -200); // Start at random negative positions (wider range)
 
                 // Random x position across entire screen width
                 columnX[i] = Math.floor(Math.random() * (window.innerWidth - 30));
+
+                // Random fall speed (some slow, some fast)
+                columnSpeed[i] = Math.random() < 0.5 ? 0.5 : 1; // 50% slow (0.5), 50% normal (1)
+
+                // Random trail length for variety
+                trailLength[i] = 3 + Math.floor(Math.random() * 5); // 3-7 characters
 
                 // Assign column behavior: 0=static, 1=slow cycle, 2=rapid phase
                 const rand = Math.random();
@@ -2030,8 +2038,8 @@
                     ctx.fillText(headChar, x, y);
                     ctx.shadowBlur = 0;
 
-                    // Trail characters (shorter trail)
-                    for (let j = 1; j < 5; j++) {
+                    // Trail characters (variable length)
+                    for (let j = 1; j < trailLength[i]; j++) {
                         const trailY = y - j * 20;
                         if (trailY > 0) {
                             let trailChar;
@@ -2052,26 +2060,42 @@
                                 trailChar = chars[Math.floor(Math.random() * chars.length)];
                             }
 
-                            // Subtle intensity for depth
-                            const intensity = Math.floor((5 - j) / 5 * 180);
+                            // Subtle intensity for depth (dynamic based on trail length)
+                            const intensity = Math.floor((trailLength[i] - j) / trailLength[i] * 180);
                             ctx.fillStyle = `rgba(0, ${intensity}, 0, 0.6)`;
                             ctx.fillText(trailChar, x, trailY);
                         }
                     }
 
-                    // Reset drop to top randomly after it goes off screen
-                    if (y > canvas.height && Math.random() > 0.975) {
-                        drops[i] = 0;
-                        // Randomize x position for variety
+                    // Reset drop to top with unpredictable timing
+                    const resetChance = Math.random() > (0.97 + Math.random() * 0.02); // 0.97-0.99 (variable)
+                    if (y > canvas.height && resetChance) {
+                        drops[i] = Math.floor(Math.random() * -100); // Random negative start
+                        // Randomize ALL properties for complete unpredictability
                         columnX[i] = Math.floor(Math.random() * (canvas.width - 30));
+                        columnSpeed[i] = Math.random() < 0.5 ? 0.5 : 1;
+                        trailLength[i] = 3 + Math.floor(Math.random() * 5);
+
+                        // Sometimes change behavior type on reset
+                        if (Math.random() > 0.7) {
+                            const rand = Math.random();
+                            if (rand < 0.5) {
+                                columnTypes[i] = 0;
+                            } else if (rand < 0.75) {
+                                columnTypes[i] = 1;
+                            } else {
+                                columnTypes[i] = 2;
+                            }
+                        }
+
                         // Clear static chars for this column when it resets
                         if (colType === 0) {
                             staticChars[i] = {};
                         }
                     }
 
-                    // Move drop down
-                    drops[i]++;
+                    // Move drop down at variable speed
+                    drops[i] += columnSpeed[i];
                 }
             }
 
