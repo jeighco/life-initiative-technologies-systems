@@ -877,7 +877,9 @@
                 <button class="control-btn" id="next-btn">NEXT →</button>
             </div>
             <div class="stats" id="stats">
-                Showing <span id="case-count">0</span> total cases | Updated: <span id="last-updated">Never</span>
+                Showing <span id="case-count">0</span> total cases
+                (<span id="new-cases-count" style="color: #00ff00;">0 new</span>) |
+                Updated: <span id="last-updated">Never</span>
             </div>
         </div>
 
@@ -911,6 +913,7 @@
             this.selectedCaseData = null;
             this.savedCases = [];
             this.searchResults = [];
+            this.mergeStats = null;  // Store merge statistics from JSON
 
             this.init();
             window.rolodex = this; // Make accessible for popup buttons
@@ -1233,6 +1236,9 @@
                     this.allCases = [...regularCases, ...partyCases];
                     this.sortCasesByDate();
                     this.newCases = this.getRecentCases();
+
+                    // Store merge statistics if available
+                    this.mergeStats = data.merge_stats || null;
                 } else {
                     console.log('Could not load enhanced_federal_report.json, using demo data');
                     this.allCases = this.getFederalCaseData();
@@ -1672,9 +1678,20 @@
 
         updateStats() {
             const caseCount = document.getElementById('case-count');
+            const newCasesCount = document.getElementById('new-cases-count');
             const lastUpdated = document.getElementById('last-updated');
 
             caseCount.textContent = this.allCases.length;
+
+            // Display new cases count from merge stats if available
+            if (this.mergeStats && this.mergeStats.new_cases_added !== undefined) {
+                newCasesCount.textContent = `${this.mergeStats.new_cases_added} new`;
+                newCasesCount.title = `${this.mergeStats.duplicates_skipped} duplicates skipped`;
+            } else {
+                newCasesCount.textContent = '0 new';
+                newCasesCount.title = 'No merge data available';
+            }
+
             lastUpdated.textContent = new Date().toLocaleTimeString();
         }
 
