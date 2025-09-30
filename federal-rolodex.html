@@ -703,11 +703,11 @@
         }
 
         .matrix-char.drop {
-            color: rgba(0, 255, 0, 0.25);
+            color: rgba(0, 255, 0, 0.6);
         }
 
         .matrix-char.linger {
-            color: rgba(0, 255, 0, 0.08);
+            color: rgba(0, 255, 0, 0.2);
         }
 
         .loading-text {
@@ -744,10 +744,10 @@
 
         @keyframes matrix-twinkle {
             0%, 100% {
-                opacity: 0.08;
+                opacity: 0.2;
             }
             50% {
-                opacity: 0.25;
+                opacity: 0.6;
             }
         }
 
@@ -1943,7 +1943,7 @@
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
             // Create static lingering characters (very sparse)
-            for (let i = 0; i < 30; i++) {
+            for (let i = 0; i < 50; i++) {
                 const char = document.createElement('div');
                 char.className = 'matrix-char linger';
                 char.textContent = chars.charAt(Math.floor(Math.random() * chars.length));
@@ -1956,7 +1956,7 @@
 
             // Dropping characters (occasional)
             setInterval(() => {
-                if (Math.random() > 0.97) { // Very sparse - 3% chance
+                if (Math.random() > 0.94) { // 6% chance
                     const char = document.createElement('div');
                     char.className = 'matrix-char drop';
                     char.textContent = chars.charAt(Math.floor(Math.random() * chars.length));
