@@ -1952,10 +1952,23 @@
 
             const columns = Math.floor(window.innerWidth / 20); // One column every 20px
             const drops = [];
+            const columnTypes = []; // Track behavior type for each column
+            const staticChars = []; // Store static characters for non-phasing columns
 
-            // Initialize drops array - each column has a y position
+            // Initialize drops array - each column has a y position and behavior type
             for (let i = 0; i < columns; i++) {
                 drops[i] = Math.floor(Math.random() * -100); // Start at random negative positions
+
+                // Assign column behavior: 0=static, 1=slow cycle, 2=rapid phase
+                const rand = Math.random();
+                if (rand < 0.5) {
+                    columnTypes[i] = 0; // 50% static
+                    staticChars[i] = {}; // Store static chars for this column
+                } else if (rand < 0.75) {
+                    columnTypes[i] = 1; // 25% slow cycle
+                } else {
+                    columnTypes[i] = 2; // 25% rapid phase (cursor effect)
+                }
             }
 
             const canvas = document.createElement('canvas');
@@ -1972,8 +1985,7 @@
             ctx.fillStyle = 'rgba(0, 0, 0, 0)'; // Transparent background
             ctx.font = '16px monospace';
 
-            // Track all character positions that exist on screen for rapid phasing
-            const activeChars = {};
+            let frameCount = 0;
 
             function drawMatrixRain() {
                 // Fade effect - creates the trail
@@ -1981,33 +1993,64 @@
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                 ctx.font = '16px monospace';
+                frameCount++;
 
                 // Draw the matrix rain
                 for (let i = 0; i < drops.length; i++) {
                     const x = i * 20;
                     const y = drops[i] * 20;
+                    const colType = columnTypes[i];
+
+                    let headChar;
+
+                    // Determine character based on column type
+                    if (colType === 0) {
+                        // Static - character doesn't change
+                        const key = `${i}_${Math.floor(y / 20)}`;
+                        if (!staticChars[i][key]) {
+                            staticChars[i][key] = chars[Math.floor(Math.random() * chars.length)];
+                        }
+                        headChar = staticChars[i][key];
+                    } else if (colType === 1) {
+                        // Slow cycle - changes every 10 frames
+                        headChar = chars[Math.floor((frameCount / 10 + i) % chars.length)];
+                    } else {
+                        // Rapid phase - changes every frame (cursor effect)
+                        headChar = chars[Math.floor(Math.random() * chars.length)];
+                    }
 
                     // Leading character (head of column) - bright white with glow
-                    // This character rapidly phases through the character set every frame
-                    const headChar = chars[Math.floor(Math.random() * chars.length)];
                     ctx.fillStyle = '#ffffff';
                     ctx.shadowColor = '#00ff00';
                     ctx.shadowBlur = 10;
                     ctx.fillText(headChar, x, y);
                     ctx.shadowBlur = 0;
 
-                    // Trail characters - each one ALSO rapidly phases
+                    // Trail characters
                     for (let j = 1; j < 8; j++) {
                         const trailY = y - j * 20;
                         if (trailY > 0) {
-                            // Each trail character rapidly cycles through chars
-                            const trailChar = chars[Math.floor(Math.random() * chars.length)];
+                            let trailChar;
+
+                            // Apply same behavior to trail
+                            if (colType === 0) {
+                                // Static trail
+                                const key = `${i}_${Math.floor(trailY / 20)}`;
+                                if (!staticChars[i][key]) {
+                                    staticChars[i][key] = chars[Math.floor(Math.random() * chars.length)];
+                                }
+                                trailChar = staticChars[i][key];
+                            } else if (colType === 1) {
+                                // Slow cycle trail
+                                trailChar = chars[Math.floor((frameCount / 10 + i + j) % chars.length)];
+                            } else {
+                                // Rapid phase trail (cursor effect)
+                                trailChar = chars[Math.floor(Math.random() * chars.length)];
+                            }
 
                             // Random intensity for depth
                             const intensity = Math.floor((8 - j) / 8 * 255);
                             ctx.fillStyle = `rgb(0, ${intensity}, 0)`;
-
-                            // Draw the rapidly phasing character
                             ctx.fillText(trailChar, x, trailY);
                         }
                     }
@@ -2015,6 +2058,10 @@
                     // Reset drop to top randomly after it goes off screen
                     if (y > canvas.height && Math.random() > 0.975) {
                         drops[i] = 0;
+                        // Clear static chars for this column when it resets
+                        if (colType === 0) {
+                            staticChars[i] = {};
+                        }
                     }
 
                     // Move drop down
