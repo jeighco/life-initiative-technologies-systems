@@ -1066,24 +1066,27 @@
         }
 
         triggerHaptic() {
-            // Force try all haptic methods regardless of detection
+            // Force try all haptic methods with STRONGER intensity
 
-            // Try direct vibration call (sometimes works even when detection fails)
+            // Try direct vibration call with strong pattern
             try {
                 if (window.navigator && window.navigator.vibrate) {
-                    window.navigator.vibrate(30); // Single strong pulse
+                    // Strong pattern: vibrate, pause, vibrate (feels like a click)
+                    window.navigator.vibrate([50, 10, 40]);
                 }
             } catch (e) {}
 
-            // Try iOS checkbox switch
+            // Try iOS checkbox switch (multiple clicks for stronger feedback)
             if (this.hasIOSHaptic) {
                 this.triggerIOSHaptic();
+                // Trigger twice for stronger feedback
+                setTimeout(() => this.triggerIOSHaptic(), 20);
             }
 
-            // Try webkit vibrate
+            // Try webkit vibrate with stronger duration
             try {
                 if (window.navigator && window.navigator.webkitVibrate) {
-                    window.navigator.webkitVibrate(30);
+                    window.navigator.webkitVibrate([50, 10, 40]);
                 }
             } catch (e) {}
         }
