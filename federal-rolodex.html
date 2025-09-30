@@ -997,53 +997,35 @@
             // Check if vibration API is supported
             this.hasVibration = 'vibrate' in navigator;
 
-            // Check if iOS Safari switch haptic is supported (Safari 17.4+)
-            this.hasIOSHaptic = this.checkIOSSwitchSupport();
+            // Create persistent iOS haptic elements (Ionic Framework approach)
+            this.createPersistentHapticElements();
 
             console.log('Haptics setup:', {
                 hasVibration: this.hasVibration,
-                hasIOSHaptic: this.hasIOSHaptic,
+                hasIOSHaptic: this.hapticLabel !== null,
                 userAgent: navigator.userAgent
             });
         }
 
-        checkIOSSwitchSupport() {
-            // Test if iOS switch checkbox haptic is supported
-            try {
-                const test = document.createElement('input');
-                test.type = 'checkbox';
-                test.setAttribute('switch', '');
-                return test.type === 'checkbox';
-            } catch (e) {
-                return false;
-            }
-        }
+        createPersistentHapticElements() {
+            // iOS 18+ Safari approach: persistent checkbox + label
+            // Based on Ionic Framework implementation
+            const label = document.createElement('label');
+            label.setAttribute('aria-hidden', 'true');
+            label.style.display = 'none';
 
-        triggerIOSHaptic() {
-            // iOS Safari 17.4+ hack: create invisible checkbox switch and toggle it
-            // The native switch has haptic feedback built-in
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.setAttribute('switch', '');
-            checkbox.style.position = 'fixed';
-            checkbox.style.left = '-9999px';
-            checkbox.style.opacity = '0.01'; // Needs to be slightly visible
+            checkbox.style.display = 'none';
 
-            document.body.appendChild(checkbox);
+            label.appendChild(checkbox);
+            document.body.appendChild(label);
 
-            // Use requestAnimationFrame to ensure it's rendered
-            requestAnimationFrame(() => {
-                // Trigger click event (more reliable than just setting checked)
-                checkbox.click();
-
-                // Clean up after a short delay
-                setTimeout(() => {
-                    if (checkbox.parentNode) {
-                        checkbox.parentNode.removeChild(checkbox);
-                    }
-                }, 50);
-            });
+            // Store reference to label for clicking
+            this.hapticLabel = label;
         }
+
 
         playTick() {
             if (!this.audioContext) return;
@@ -1066,27 +1048,15 @@
         }
 
         triggerHaptic() {
-            // Force try all haptic methods with STRONGER intensity
-
-            // Try direct vibration call with strong pattern
-            try {
-                if (window.navigator && window.navigator.vibrate) {
-                    // Strong pattern: vibrate, pause, vibrate (feels like a click)
-                    window.navigator.vibrate([50, 10, 40]);
-                }
-            } catch (e) {}
-
-            // Try iOS checkbox switch (multiple clicks for stronger feedback)
-            if (this.hasIOSHaptic) {
-                this.triggerIOSHaptic();
-                // Trigger twice for stronger feedback
-                setTimeout(() => this.triggerIOSHaptic(), 20);
+            // iOS Safari: Click the persistent label (Ionic Framework approach)
+            if (this.hapticLabel) {
+                this.hapticLabel.click();
             }
 
-            // Try webkit vibrate with stronger duration
+            // Fallback: Try vibration API (Android)
             try {
-                if (window.navigator && window.navigator.webkitVibrate) {
-                    window.navigator.webkitVibrate([50, 10, 40]);
+                if (window.navigator && window.navigator.vibrate) {
+                    window.navigator.vibrate(30);
                 }
             } catch (e) {}
         }
