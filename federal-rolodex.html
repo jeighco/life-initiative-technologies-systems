@@ -691,7 +691,7 @@
             width: 100%;
             height: 100%;
             z-index: -1;
-            opacity: 0.15;
+            opacity: 1;
             pointer-events: none;
         }
 
@@ -1950,7 +1950,7 @@
             console.log('Setting up Matrix rain effect...');
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-            const columns = Math.floor(window.innerWidth / 60); // One column every 60px (sparse)
+            const columns = Math.floor(window.innerWidth / 100); // One column every 100px (very sparse)
             const drops = [];
             const columnTypes = []; // Track behavior type for each column
             const staticChars = []; // Store static characters for non-phasing columns
@@ -1997,7 +1997,7 @@
 
                 // Draw the matrix rain
                 for (let i = 0; i < drops.length; i++) {
-                    const x = i * 60;
+                    const x = i * 100;
                     const y = drops[i] * 20;
                     const colType = columnTypes[i];
 
@@ -2069,8 +2069,8 @@
                 }
             }
 
-            // Draw at 20 FPS for subtle effect
-            setInterval(drawMatrixRain, 50);
+            // Draw at slower rate for calm effect
+            setInterval(drawMatrixRain, 80);
 
             console.log('Matrix rain initialized with ' + columns + ' columns');
         }
