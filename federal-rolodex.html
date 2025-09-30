@@ -999,6 +999,12 @@
 
             // Check if iOS Safari switch haptic is supported (Safari 17.4+)
             this.hasIOSHaptic = this.checkIOSSwitchSupport();
+
+            console.log('Haptics setup:', {
+                hasVibration: this.hasVibration,
+                hasIOSHaptic: this.hasIOSHaptic,
+                userAgent: navigator.userAgent
+            });
         }
 
         checkIOSSwitchSupport() {
@@ -1019,23 +1025,24 @@
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.setAttribute('switch', '');
-            checkbox.style.position = 'absolute';
-            checkbox.style.opacity = '0';
-            checkbox.style.pointerEvents = 'none';
-            checkbox.style.width = '0';
-            checkbox.style.height = '0';
+            checkbox.style.position = 'fixed';
+            checkbox.style.left = '-9999px';
+            checkbox.style.opacity = '0.01'; // Needs to be slightly visible
 
             document.body.appendChild(checkbox);
 
-            // Toggle to trigger haptic
-            checkbox.checked = true;
+            // Use requestAnimationFrame to ensure it's rendered
+            requestAnimationFrame(() => {
+                // Trigger click event (more reliable than just setting checked)
+                checkbox.click();
 
-            // Clean up immediately
-            setTimeout(() => {
-                if (checkbox.parentNode) {
-                    checkbox.parentNode.removeChild(checkbox);
-                }
-            }, 10);
+                // Clean up after a short delay
+                setTimeout(() => {
+                    if (checkbox.parentNode) {
+                        checkbox.parentNode.removeChild(checkbox);
+                    }
+                }, 50);
+            });
         }
 
         playTick() {
@@ -1082,6 +1089,9 @@
                 this.playTick();
                 this.triggerHaptic();
                 this.lastHapticRotation = this.currentRotation;
+
+                // Debug: uncomment to see when haptics trigger
+                // console.log('Haptic triggered at rotation:', this.currentRotation);
             }
         }
 
